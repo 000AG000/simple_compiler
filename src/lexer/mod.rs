@@ -301,15 +301,15 @@ pub fn lexanize(file: &mut File) -> Result<Vec<Token>, LexanizerError> {
                     LexanizerState::Empty => {
                         lexanizer_state = LexanizerState::String;
                         string_now = String::new();
-                        string_now.push(char::from_u32(next_elem as u32).unwrap());
+                        string_now.push(next_elem as char);
                     }
                     LexanizerState::String => {
-                        string_now.push(char::from_u32(next_elem as u32).unwrap())
+                        string_now.push(next_elem as char);
                     }
                     _ => {
                         return Err(LexanizerError::UnexpectedCharacter(
                             string_now,
-                            char::from_u32(next_elem as u32).unwrap(),
+                            next_elem as char,
                         ));
                     }
                 },
@@ -317,22 +317,22 @@ pub fn lexanize(file: &mut File) -> Result<Vec<Token>, LexanizerError> {
                     LexanizerState::Empty => {
                         lexanizer_state = LexanizerState::Number;
                         string_now = String::new();
-                        string_now.push(char::from_u32(next_elem as u32).unwrap());
+                        string_now.push(next_elem as char);
                     }
                     LexanizerState::Number => {
-                        string_now.push(char::from_u32(next_elem as u32).unwrap())
+                        string_now.push(next_elem as char)
                     }
                     _ => {
                         return Err(LexanizerError::UnexpectedCharacter(
                             string_now,
-                            char::from_u32(next_elem as u32).unwrap(),
+                            next_elem as char,
                         ));
                     }
                 },
 
                 LexTableEntries::Undefined => {
                     return Err(LexanizerError::UnkownCharacter(
-                        char::from_u32(next_elem as u32).unwrap(),
+                        next_elem as char,
                     ));
                 }
             }
