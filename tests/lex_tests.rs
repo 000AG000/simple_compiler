@@ -3,7 +3,7 @@
 mod tests {
     use std::fs::File;
 
-    use simple_compiler::lexer::{Token, lexanize};
+    use simple_compiler::lexer::{TokenKind, lexanize,Token,Span};
 
     #[test]
     fn test_lexanization_simple_test_file() {
@@ -11,9 +11,22 @@ mod tests {
         let lex_vec = lexanize(&mut file).unwrap();
 
         let simple_test_file_vec = vec![
-            Token::Let, Token::Ident(String::from("x")),Token::Equal, Token::Number(0),Token::Semicolon,Token::Newline,
-            Token::Ident(String::from("x")),Token::Equal,Token::Ident(String::from("x")),Token::Plus,Token::Number(1),Token::Semicolon,Token::Newline,
-            Token::Print,Token::Ident(String::from("x")),Token::Semicolon
+            Token{kind:TokenKind::Let,span:Span{start:0,end:3}},
+            Token{kind:TokenKind::Ident,span:Span{start:4,end:5}},
+            Token{kind:TokenKind::Equal,span: Span{start:6,end:7}},
+            Token{kind:TokenKind::Number(0),span:Span{start:8,end:9}},
+            Token{kind:TokenKind::Semicolon,span:Span{start:9,end:10}},
+            Token{kind:TokenKind::Newline,span:Span{start:10,end:11}},
+            Token{kind:TokenKind::Ident,span:Span{start:11,end:12}},
+            Token{kind:TokenKind::Equal,span:Span{start:13,end:14}},
+            Token{kind:TokenKind::Ident,span:Span{start:15,end:16}},
+            Token{kind:TokenKind::Plus,span:Span{start:17,end:18}},
+            Token{kind:TokenKind::Number(1),span:Span{start:19,end:20}},
+            Token{kind:TokenKind::Semicolon,span:Span{start:20,end:21}},
+            Token{kind:TokenKind::Newline,span:Span{start:21,end:22}},
+            Token{kind:TokenKind::Print,span:Span{start:22,end:27}},
+            Token{kind:TokenKind::Ident,span:Span{start:28,end:29}},
+            Token{kind:TokenKind::Semicolon,span:Span{start:29,end:30}},
         ] ;
 
         assert_eq!(lex_vec,simple_test_file_vec);

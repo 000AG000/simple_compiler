@@ -10,8 +10,8 @@ pub struct Span {
 #[derive(Debug, Clone, PartialEq)]
 // Token given from the lexical analysis
 pub struct Token {
-    kind: TokenKind,
-    span: Span,
+    pub kind: TokenKind,
+    pub span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -218,8 +218,8 @@ pub enum LexanizerError {
 /// let token_vec = lexanize(file)?;
 /// ```
 ///
-pub fn lexanize(file: &mut File) -> Result<Vec<TokenKind>, LexanizerError> {
-    let mut lexed_tokens = Vec::with_capacity(1000);
+pub fn lexanize(file: &mut File) -> Result<Vec<Token>, LexanizerError> {
+    let mut lexed_tokens: Vec<Token> = Vec::with_capacity(1000);
     let lex_table = get_lex_table();
     let mut buffer = [0; 3000];
     let keyword_map = get_keyword_map();
@@ -228,18 +228,21 @@ pub fn lexanize(file: &mut File) -> Result<Vec<TokenKind>, LexanizerError> {
     enum LexanizerState {
         Normal,
         SpaceNeeding,
-        Number(String),
-        Indent(String),
+        /// Number(start position, string)
+        Number(usize, String),
+        /// Indent(start position, string)
+        Indent(usize, String),
     }
 
     fn handle_string_end(
         state: LexanizerState,
-        token_vec: &mut Vec<TokenKind>,
+        token_vec: &mut Vec<Token>,
         keyword_map: &HashMap<&str, TokenKind>,
+        end_position: usize,
     ) -> Result<(), LexanizerError> {
         match state {
-            LexanizerState::Number(number_str) => {
-                token_vec.push(TokenKind::Number(match number_str.parse::<isize>() {
+            LexanizerState::Number(start_position, number_str) => token_vec.push(Token {
+                kind: TokenKind::Number(match number_str.parse::<isize>() {
                     Ok(number) => number,
                     Err(_) => {
                         return Err(LexanizerError::ConversionError(
@@ -247,23 +250,18 @@ pub fn lexanize(file: &mut File) -> Result<Vec<TokenKind>, LexanizerError> {
                             number_str.to_string(),
                         ));
                     }
-                }))
-            }
-            LexanizerState::Indent(indent) => match keyword_map.get(&indent as &str) {
-                Some(token) => token_vec.push(token.clone()),
-                None => token_vec.push(TokenKind::Ident),
+                }),
+                span: Span { start: start_position, end: end_position },
+            }),
+            LexanizerState::Indent(start_position,indent) => match keyword_map.get(&indent as &str) {
+                Some(token) => token_vec.push(Token { kind: token.clone(), span:  Span { start: start_position, end: end_position }}),
+                None => token_vec.push(Token { kind: TokenKind::Ident , span:  Span { start: start_position, end: end_position } }),
             },
-            _ => {
-                return Err(LexanizerError::ConversionError(
-                    "Alphabetic|Number".to_string(),
-                    format!("{:?}", state),
-                ));
-            }
+            _ => ()
         }
         Ok(())
     }
     let mut lexanizer_state = LexanizerState::Normal;
-    let mut string_now = String::new();
     let mut position = 0;
     // iterate over file buffer
     while let Ok(n_read) = file.read(&mut buffer) {
@@ -280,21 +278,33 @@ pub fn lexanize(file: &mut File) -> Result<Vec<TokenKind>, LexanizerError> {
             lexanizer_state = match (lexanizer_state, lex_entry) {
                 (LexanizerState::Normal, LexTableEntries::Split) => LexanizerState::Normal,
                 (LexanizerState::Normal, LexTableEntries::Token(token)) => {
-                    lexed_tokens.push(token.clone());
+                    lexed_tokens.push(Token {
+                        kind: token.clone(),
+                        span: Span {
+                            start: position,
+                            end: position + 1,
+                        },
+                    });
                     LexanizerState::Normal
                 }
                 (LexanizerState::Normal, LexTableEntries::SpaceNeedingToken(token)) => {
-                    lexed_tokens.push(token.clone());
+                    lexed_tokens.push(Token {
+                        kind: token.clone(),
+                        span: Span {
+                            start: position,
+                            end: position + 1,
+                        },
+                    });
                     LexanizerState::SpaceNeeding
                 }
                 (LexanizerState::Normal, LexTableEntries::Alphabetic) => {
                     let mut string = String::new();
                     string.push(next_elem as char);
-                    LexanizerState::Indent(string)
+                    LexanizerState::Indent(position,string)
                 }
-                (LexanizerState::Indent(mut string), LexTableEntries::Alphabetic) => {
+                (LexanizerState::Indent(start_postion,mut string), LexTableEntries::Alphabetic) => {
                     string.push(next_elem as char);
-                    LexanizerState::Indent(string)
+                    LexanizerState::Indent(start_postion,string)
                 }
                 (_, LexTableEntries::Alphabetic) => {
                     return Err(LexanizerError::UnexpectedCharacter(
@@ -305,11 +315,11 @@ pub fn lexanize(file: &mut File) -> Result<Vec<TokenKind>, LexanizerError> {
                 (LexanizerState::Normal, LexTableEntries::Numeric) => {
                     let mut string = String::new();
                     string.push(next_elem as char);
-                    LexanizerState::Number(string)
+                    LexanizerState::Number(position,string)
                 }
-                (LexanizerState::Indent(mut string), LexTableEntries::Numeric) => {
+                (LexanizerState::Indent(start_position,mut string), LexTableEntries::Numeric) => {
                     string.push(next_elem as char);
-                    LexanizerState::Number(string)
+                    LexanizerState::Number(start_position,string)
                 }
                 (_, LexTableEntries::Numeric) => {
                     return Err(LexanizerError::UnexpectedCharacter(
@@ -327,62 +337,68 @@ pub fn lexanize(file: &mut File) -> Result<Vec<TokenKind>, LexanizerError> {
                         position,
                     ));
                 }
-                (LexanizerState::Number(in_string), LexTableEntries::Split) => {
+                (LexanizerState::Number(start_position,in_string), LexTableEntries::Split) => {
                     handle_string_end(
-                        LexanizerState::Number(in_string),
+                        LexanizerState::Number(start_position,in_string),
                         &mut lexed_tokens,
                         &keyword_map,
+                        position
                     )?;
                     LexanizerState::Normal
                 }
-                (LexanizerState::Indent(in_string), LexTableEntries::Split) => {
+                (LexanizerState::Indent(start_position,in_string), LexTableEntries::Split) => {
                     handle_string_end(
-                        LexanizerState::Indent(in_string),
+                        LexanizerState::Indent(start_position,in_string),
                         &mut lexed_tokens,
                         &keyword_map,
+                        position,
                     )?;
                     LexanizerState::Normal
                 }
-                (LexanizerState::Number(string), LexTableEntries::Token(token_kind)) => {
+                (LexanizerState::Number(start_position,string), LexTableEntries::Token(token_kind)) => {
                     handle_string_end(
-                        LexanizerState::Number(string),
+                        LexanizerState::Number(start_position,string),
                         &mut lexed_tokens,
                         &keyword_map,
+                        position,
                     )?;
-                    lexed_tokens.push(token_kind.clone());
+                    lexed_tokens.push(Token { kind: token_kind.clone(), span: Span { start: position, end: position+1 } });
                     LexanizerState::Normal
                 }
                 (
-                    LexanizerState::Number(string),
+                    LexanizerState::Number(start_position,string),
                     LexTableEntries::SpaceNeedingToken(token_kind),
                 ) => {
                     handle_string_end(
-                        LexanizerState::Number(string),
+                        LexanizerState::Number(start_position,string),
                         &mut lexed_tokens,
                         &keyword_map,
+                        position,
                     )?;
-                    lexed_tokens.push(token_kind.clone());
+                    lexed_tokens.push(Token { kind: token_kind.clone(), span: Span { start: position, end: position+1 } });
                     LexanizerState::SpaceNeeding
                 }
-                (LexanizerState::Indent(string), LexTableEntries::Token(token_kind)) => {
+                (LexanizerState::Indent(start_position,string), LexTableEntries::Token(token_kind)) => {
                     handle_string_end(
-                        LexanizerState::Indent(string),
+                        LexanizerState::Indent(start_position,string),
                         &mut lexed_tokens,
                         &keyword_map,
+                        position,
                     )?;
-                    lexed_tokens.push(token_kind.clone());
+                    lexed_tokens.push(Token { kind: token_kind.clone(), span: Span { start: position, end: position+1 } });
                     LexanizerState::Normal
                 }
                 (
-                    LexanizerState::Indent(string),
+                    LexanizerState::Indent(start_position,string),
                     LexTableEntries::SpaceNeedingToken(token_kind),
                 ) => {
                     handle_string_end(
-                        LexanizerState::Number(string),
+                        LexanizerState::Number(start_position,string),
                         &mut lexed_tokens,
                         &keyword_map,
+                        start_position,
                     )?;
-                    lexed_tokens.push(token_kind.clone());
+                    lexed_tokens.push(Token { kind: token_kind.clone(), span: Span { start: position, end: position+1 } });
                     LexanizerState::SpaceNeeding
                 }
             };
@@ -391,6 +407,6 @@ pub fn lexanize(file: &mut File) -> Result<Vec<TokenKind>, LexanizerError> {
     }
 
     // handle end state
-    handle_string_end(lexanizer_state, &mut lexed_tokens, &keyword_map);
+    handle_string_end(lexanizer_state, &mut lexed_tokens, &keyword_map,position)?;
     return Ok(lexed_tokens);
 }
