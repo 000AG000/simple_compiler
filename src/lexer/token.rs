@@ -1,17 +1,16 @@
 /// token.rs
 /// Token used by lexical analysis
-/// - consists of Tokenkind and Span 
+/// - consists of Tokenkind and Span
 /// - Span defines start and endposition of token
-/// 
+///
 /// Defines also Token(kind)classes like:
 /// - CONSTANT_TOKENS: tokens that have a constant length
 /// - KEYWORD_TOKEN: token assotiated with a string keyword
-/// 
+///
 /// Defines a mapping between TokenKind and associated String or
 /// Char via SpecialToken
-/// 
+///
 /// get_keyword_map gives a HashMap for all keyword tokens
-
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -21,6 +20,11 @@ pub struct Token {
     pub span: Span,
 }
 
+impl Token {
+    pub fn lexeme<'a>(&self, input: &'a str) -> &'a str {
+        &input[self.span.start..self.span.end]
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 /// Span for token start and end
@@ -28,8 +32,6 @@ pub struct Span {
     pub start: usize,
     pub end: usize,
 }
-
-
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 /// Token used for the lexing process

@@ -139,7 +139,7 @@ pub fn lex(lex_input: &str) -> Result<Vec<Token>, LexError> {
             }
             (LexState::Ident(start_position, mut string), LexTableEntry::Numeric) => {
                 string.push(next_elem as char);
-                LexState::Number(start_position, string)
+                LexState::Ident(start_position, string)
             }
             (_, LexTableEntry::Numeric) => {
                 return Err(LexError {

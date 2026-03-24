@@ -13,7 +13,8 @@ mod tests {
     #[test]
     fn test_number_ident_mix() {
         let input = "abc123";
-        assert!(lex(input).is_err());
+        let tokens = lex(input).unwrap();
+        assert_eq!(tokens[0],Token{kind:TokenKind::Ident,span:Span { start: 0, end: 6 }})
     }
 
     #[test]

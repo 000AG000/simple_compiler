@@ -1,9 +1,4 @@
-/// Table-driven lexer:
-/// Design decisions:
-/// - operates on ASCII input only
-/// - uses table-driven classification for performance
-/// - uses state machine for token construction
-/// - stores spans instead of copying lexemesuse std::fmt;
+/// Lexer module for providing lexical analysis
 
 mod token;
 mod lex_table;
