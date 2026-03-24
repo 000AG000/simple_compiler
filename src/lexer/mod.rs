@@ -95,74 +95,8 @@ const fn get_token_keyword(token: &TokenKind) -> SpecialToken {
     }
 }
 
-/// get in an array special chars
-const fn get_char_mask() -> [Option<TokenKind>; u8::MAX as usize] {
-    let mut lex_table = [const { None }; u8::MAX as usize];
-    let mut i = 0;
-
-    // no for loop allowed because of const
-
-    while i < CONSTANT_TOKENS.len() {
-        match get_token_keyword(&CONSTANT_TOKENS[i]) {
-            SpecialToken::Char(c) => {
-                lex_table[c as usize] = Some(match &CONSTANT_TOKENS[i] {
-                    TokenKind::Let => TokenKind::Let,
-                    TokenKind::Equal => TokenKind::Equal,
-                    TokenKind::Plus => TokenKind::Plus,
-                    TokenKind::Minus => TokenKind::Minus,
-                    TokenKind::Newline => TokenKind::Newline,
-                    TokenKind::Semicolon => TokenKind::Semicolon,
-                    TokenKind::Loop => TokenKind::Loop,
-                    TokenKind::End => TokenKind::End,
-                    TokenKind::Do => TokenKind::Do,
-                    TokenKind::Print => TokenKind::Print,
-                    TokenKind::Ident => TokenKind::Ident,
-                    TokenKind::Number(x) => TokenKind::Number(*x),
-                });
-            }
-            _ => {}
-        }
-        i += 1;
-    }
-
-    lex_table
-}
-
-/// get in an array special chars needing a space after it to be valid
-const fn get_char_needing_space_mask() -> [Option<TokenKind>; u8::MAX as usize] {
-    let mut lex_table = [const { None }; u8::MAX as usize];
-    let mut i = 0;
-
-    // no for loop allowed because of const
-
-    while i < CONSTANT_TOKENS.len() {
-        match get_token_keyword(&CONSTANT_TOKENS[i]) {
-            SpecialToken::CharWithNeededSpace(c) => {
-                lex_table[c as usize] = Some(match &CONSTANT_TOKENS[i] {
-                    TokenKind::Let => TokenKind::Let,
-                    TokenKind::Equal => TokenKind::Equal,
-                    TokenKind::Plus => TokenKind::Plus,
-                    TokenKind::Minus => TokenKind::Minus,
-                    TokenKind::Newline => TokenKind::Newline,
-                    TokenKind::Semicolon => TokenKind::Semicolon,
-                    TokenKind::Loop => TokenKind::Loop,
-                    TokenKind::End => TokenKind::End,
-                    TokenKind::Do => TokenKind::Do,
-                    TokenKind::Print => TokenKind::Print,
-                    TokenKind::Ident => TokenKind::Ident,
-                    TokenKind::Number(x) => TokenKind::Number(*x),
-                });
-            }
-            _ => {}
-        }
-        i += 1;
-    }
-
-    lex_table
-}
-
-#[derive(Debug, Clone)]
-enum LexTableEntries {
+#[derive(Debug, Clone, PartialEq)]
+pub enum LexTableEntry {
     Split,
     Token(TokenKind),
     SpaceNeedingToken(TokenKind),
@@ -171,32 +105,113 @@ enum LexTableEntries {
     Undefined,
 }
 
-/// get table for checking possible token type from start in constant time
-fn get_lex_table() -> [LexTableEntries; u8::MAX as usize] {
-    let mut lex_table = [const { LexTableEntries::Undefined }; u8::MAX as usize];
+#[derive(Debug, Clone, PartialEq)]
+/// LexTable is a O(1) lookup table for what kind of byte it is
+/// 
+/// The LexTable is build when crating the new instance and accessed via classify
+pub struct LexTable {
+    entries: [LexTableEntry; 256],
+}
 
-    for i in 0..u8::MAX {
-        match char::from_u32(i as u32) {
-            None => (),
-            Some(char) => match (
-                char,
-                get_char_mask()[i as usize].clone(),
-                get_char_needing_space_mask()[i as usize].clone(),
-            ) {
-                ('a'..'z', ..) => lex_table[i as usize] = LexTableEntries::Alphabetic,
-                ('A'..'Z', ..) => lex_table[i as usize] = LexTableEntries::Alphabetic,
-                ('0'..'9', ..) => lex_table[i as usize] = LexTableEntries::Numeric,
-                (' ', ..) => lex_table[i as usize] = LexTableEntries::Split,
-                (_, Some(token), _) => lex_table[i as usize] = LexTableEntries::Token(token),
-                (_, _, Some(token)) => {
-                    lex_table[i as usize] = LexTableEntries::SpaceNeedingToken(token)
-                }
-                _ => (),
-            },
+impl LexTable {
+    /// Creating a new LexTable
+    pub fn new() -> Self {
+        let mut entries = [const { LexTableEntry::Undefined }; 256];
+
+        for i in 0..u8::MAX {
+            match char::from_u32(i as u32) {
+                None => (),
+                Some(char) => match (
+                    char,
+                    LexTable::get_char_mask()[i as usize].clone(),
+                    LexTable::get_char_needing_space_mask()[i as usize].clone(),
+                ) {
+                    ('a'..'z', ..) => entries[i as usize] = LexTableEntry::Alphabetic,
+                    ('A'..'Z', ..) => entries[i as usize] = LexTableEntry::Alphabetic,
+                    ('0'..'9', ..) => entries[i as usize] = LexTableEntry::Numeric,
+                    (' ', ..) => entries[i as usize] = LexTableEntry::Split,
+                    (_, Some(token), _) => entries[i as usize] = LexTableEntry::Token(token),
+                    (_, _, Some(token)) => {
+                        entries[i as usize] = LexTableEntry::SpaceNeedingToken(token)
+                    }
+                    _ => (),
+                },
+            }
         }
+
+        LexTable { entries }
     }
 
-    lex_table
+    /// get in an array special chars
+    const fn get_char_mask() -> [Option<TokenKind>; u8::MAX as usize] {
+        let mut lex_table = [const { None }; u8::MAX as usize];
+        let mut i = 0;
+
+        // no for loop allowed because of const
+
+        while i < CONSTANT_TOKENS.len() {
+            match get_token_keyword(&CONSTANT_TOKENS[i]) {
+                SpecialToken::Char(c) => {
+                    lex_table[c as usize] = Some(match &CONSTANT_TOKENS[i] {
+                        TokenKind::Let => TokenKind::Let,
+                        TokenKind::Equal => TokenKind::Equal,
+                        TokenKind::Plus => TokenKind::Plus,
+                        TokenKind::Minus => TokenKind::Minus,
+                        TokenKind::Newline => TokenKind::Newline,
+                        TokenKind::Semicolon => TokenKind::Semicolon,
+                        TokenKind::Loop => TokenKind::Loop,
+                        TokenKind::End => TokenKind::End,
+                        TokenKind::Do => TokenKind::Do,
+                        TokenKind::Print => TokenKind::Print,
+                        TokenKind::Ident => TokenKind::Ident,
+                        TokenKind::Number(x) => TokenKind::Number(*x),
+                    });
+                }
+                _ => {}
+            }
+            i += 1;
+        }
+
+        lex_table
+    }
+
+    /// get in an array special chars needing a space after it to be valid
+    const fn get_char_needing_space_mask() -> [Option<TokenKind>; u8::MAX as usize] {
+        let mut lex_table = [const { None }; u8::MAX as usize];
+        let mut i = 0;
+
+        // no for loop allowed because of const
+
+        while i < CONSTANT_TOKENS.len() {
+            match get_token_keyword(&CONSTANT_TOKENS[i]) {
+                SpecialToken::CharWithNeededSpace(c) => {
+                    lex_table[c as usize] = Some(match &CONSTANT_TOKENS[i] {
+                        TokenKind::Let => TokenKind::Let,
+                        TokenKind::Equal => TokenKind::Equal,
+                        TokenKind::Plus => TokenKind::Plus,
+                        TokenKind::Minus => TokenKind::Minus,
+                        TokenKind::Newline => TokenKind::Newline,
+                        TokenKind::Semicolon => TokenKind::Semicolon,
+                        TokenKind::Loop => TokenKind::Loop,
+                        TokenKind::End => TokenKind::End,
+                        TokenKind::Do => TokenKind::Do,
+                        TokenKind::Print => TokenKind::Print,
+                        TokenKind::Ident => TokenKind::Ident,
+                        TokenKind::Number(x) => TokenKind::Number(*x),
+                    });
+                }
+                _ => {}
+            }
+            i += 1;
+        }
+
+        lex_table
+    }
+
+    /// lookup byte in LexTable
+    pub fn classify(&self, byte: u8) -> &LexTableEntry {
+        &self.entries[byte as usize]
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -220,7 +235,7 @@ pub enum LexanizerError {
 ///
 pub fn lexanize(file: &mut File) -> Result<Vec<Token>, LexanizerError> {
     let mut lexed_tokens: Vec<Token> = Vec::with_capacity(1000);
-    let lex_table = get_lex_table();
+    let lex_table = LexTable::new();
     let mut buffer = [0; 3000];
     let keyword_map = get_keyword_map();
 
@@ -251,13 +266,30 @@ pub fn lexanize(file: &mut File) -> Result<Vec<Token>, LexanizerError> {
                         ));
                     }
                 }),
-                span: Span { start: start_position, end: end_position },
+                span: Span {
+                    start: start_position,
+                    end: end_position,
+                },
             }),
-            LexanizerState::Indent(start_position,indent) => match keyword_map.get(&indent as &str) {
-                Some(token) => token_vec.push(Token { kind: token.clone(), span:  Span { start: start_position, end: end_position }}),
-                None => token_vec.push(Token { kind: TokenKind::Ident , span:  Span { start: start_position, end: end_position } }),
-            },
-            _ => ()
+            LexanizerState::Indent(start_position, indent) => {
+                match keyword_map.get(&indent as &str) {
+                    Some(token) => token_vec.push(Token {
+                        kind: token.clone(),
+                        span: Span {
+                            start: start_position,
+                            end: end_position,
+                        },
+                    }),
+                    None => token_vec.push(Token {
+                        kind: TokenKind::Ident,
+                        span: Span {
+                            start: start_position,
+                            end: end_position,
+                        },
+                    }),
+                }
+            }
+            _ => (),
         }
         Ok(())
     }
@@ -273,11 +305,11 @@ pub fn lexanize(file: &mut File) -> Result<Vec<Token>, LexanizerError> {
         for place in 0..n_read {
             let next_elem = buffer[place];
 
-            let lex_entry = &lex_table[next_elem as usize];
+            let lex_entry = lex_table.classify(next_elem);
 
             lexanizer_state = match (lexanizer_state, lex_entry) {
-                (LexanizerState::Normal, LexTableEntries::Split) => LexanizerState::Normal,
-                (LexanizerState::Normal, LexTableEntries::Token(token)) => {
+                (LexanizerState::Normal, LexTableEntry::Split) => LexanizerState::Normal,
+                (LexanizerState::Normal, LexTableEntry::Token(token)) => {
                     lexed_tokens.push(Token {
                         kind: token.clone(),
                         span: Span {
@@ -287,7 +319,7 @@ pub fn lexanize(file: &mut File) -> Result<Vec<Token>, LexanizerError> {
                     });
                     LexanizerState::Normal
                 }
-                (LexanizerState::Normal, LexTableEntries::SpaceNeedingToken(token)) => {
+                (LexanizerState::Normal, LexTableEntry::SpaceNeedingToken(token)) => {
                     lexed_tokens.push(Token {
                         kind: token.clone(),
                         span: Span {
@@ -297,108 +329,138 @@ pub fn lexanize(file: &mut File) -> Result<Vec<Token>, LexanizerError> {
                     });
                     LexanizerState::SpaceNeeding
                 }
-                (LexanizerState::Normal, LexTableEntries::Alphabetic) => {
+                (LexanizerState::Normal, LexTableEntry::Alphabetic) => {
                     let mut string = String::new();
                     string.push(next_elem as char);
-                    LexanizerState::Indent(position,string)
+                    LexanizerState::Indent(position, string)
                 }
-                (LexanizerState::Indent(start_postion,mut string), LexTableEntries::Alphabetic) => {
+                (LexanizerState::Indent(start_postion, mut string), LexTableEntry::Alphabetic) => {
                     string.push(next_elem as char);
-                    LexanizerState::Indent(start_postion,string)
+                    LexanizerState::Indent(start_postion, string)
                 }
-                (_, LexTableEntries::Alphabetic) => {
+                (_, LexTableEntry::Alphabetic) => {
                     return Err(LexanizerError::UnexpectedCharacter(
                         next_elem as char,
                         position,
                     ));
                 }
-                (LexanizerState::Normal, LexTableEntries::Numeric) => {
+                (LexanizerState::Normal, LexTableEntry::Numeric) => {
                     let mut string = String::new();
                     string.push(next_elem as char);
-                    LexanizerState::Number(position,string)
+                    LexanizerState::Number(position, string)
                 }
-                (LexanizerState::Indent(start_position,mut string), LexTableEntries::Numeric) => {
+                (LexanizerState::Indent(start_position, mut string), LexTableEntry::Numeric) => {
                     string.push(next_elem as char);
-                    LexanizerState::Number(start_position,string)
+                    LexanizerState::Number(start_position, string)
                 }
-                (_, LexTableEntries::Numeric) => {
+                (_, LexTableEntry::Numeric) => {
                     return Err(LexanizerError::UnexpectedCharacter(
                         next_elem as char,
                         position,
                     ));
                 }
-                (_, LexTableEntries::Undefined) => {
+                (_, LexTableEntry::Undefined) => {
                     return Err(LexanizerError::UnkownCharacter(next_elem as char, position));
                 }
-                (LexanizerState::SpaceNeeding, LexTableEntries::Split) => LexanizerState::Normal,
+                (LexanizerState::SpaceNeeding, LexTableEntry::Split) => LexanizerState::Normal,
                 (LexanizerState::SpaceNeeding, _) => {
                     return Err(LexanizerError::UnexpectedCharacter(
                         next_elem as char,
                         position,
                     ));
                 }
-                (LexanizerState::Number(start_position,in_string), LexTableEntries::Split) => {
+                (LexanizerState::Number(start_position, in_string), LexTableEntry::Split) => {
                     handle_string_end(
-                        LexanizerState::Number(start_position,in_string),
-                        &mut lexed_tokens,
-                        &keyword_map,
-                        position
-                    )?;
-                    LexanizerState::Normal
-                }
-                (LexanizerState::Indent(start_position,in_string), LexTableEntries::Split) => {
-                    handle_string_end(
-                        LexanizerState::Indent(start_position,in_string),
+                        LexanizerState::Number(start_position, in_string),
                         &mut lexed_tokens,
                         &keyword_map,
                         position,
                     )?;
                     LexanizerState::Normal
                 }
-                (LexanizerState::Number(start_position,string), LexTableEntries::Token(token_kind)) => {
+                (LexanizerState::Indent(start_position, in_string), LexTableEntry::Split) => {
                     handle_string_end(
-                        LexanizerState::Number(start_position,string),
+                        LexanizerState::Indent(start_position, in_string),
                         &mut lexed_tokens,
                         &keyword_map,
                         position,
                     )?;
-                    lexed_tokens.push(Token { kind: token_kind.clone(), span: Span { start: position, end: position+1 } });
                     LexanizerState::Normal
                 }
                 (
-                    LexanizerState::Number(start_position,string),
-                    LexTableEntries::SpaceNeedingToken(token_kind),
+                    LexanizerState::Number(start_position, string),
+                    LexTableEntry::Token(token_kind),
                 ) => {
                     handle_string_end(
-                        LexanizerState::Number(start_position,string),
+                        LexanizerState::Number(start_position, string),
                         &mut lexed_tokens,
                         &keyword_map,
                         position,
                     )?;
-                    lexed_tokens.push(Token { kind: token_kind.clone(), span: Span { start: position, end: position+1 } });
+                    lexed_tokens.push(Token {
+                        kind: token_kind.clone(),
+                        span: Span {
+                            start: position,
+                            end: position + 1,
+                        },
+                    });
+                    LexanizerState::Normal
+                }
+                (
+                    LexanizerState::Number(start_position, string),
+                    LexTableEntry::SpaceNeedingToken(token_kind),
+                ) => {
+                    handle_string_end(
+                        LexanizerState::Number(start_position, string),
+                        &mut lexed_tokens,
+                        &keyword_map,
+                        position,
+                    )?;
+                    lexed_tokens.push(Token {
+                        kind: token_kind.clone(),
+                        span: Span {
+                            start: position,
+                            end: position + 1,
+                        },
+                    });
                     LexanizerState::SpaceNeeding
                 }
-                (LexanizerState::Indent(start_position,string), LexTableEntries::Token(token_kind)) => {
+                (
+                    LexanizerState::Indent(start_position, string),
+                    LexTableEntry::Token(token_kind),
+                ) => {
                     handle_string_end(
-                        LexanizerState::Indent(start_position,string),
+                        LexanizerState::Indent(start_position, string),
                         &mut lexed_tokens,
                         &keyword_map,
                         position,
                     )?;
-                    lexed_tokens.push(Token { kind: token_kind.clone(), span: Span { start: position, end: position+1 } });
+                    lexed_tokens.push(Token {
+                        kind: token_kind.clone(),
+                        span: Span {
+                            start: position,
+                            end: position + 1,
+                        },
+                    });
                     LexanizerState::Normal
                 }
                 (
-                    LexanizerState::Indent(start_position,string),
-                    LexTableEntries::SpaceNeedingToken(token_kind),
+                    LexanizerState::Indent(start_position, string),
+                    LexTableEntry::SpaceNeedingToken(token_kind),
                 ) => {
                     handle_string_end(
-                        LexanizerState::Number(start_position,string),
+                        LexanizerState::Number(start_position, string),
                         &mut lexed_tokens,
                         &keyword_map,
                         start_position,
                     )?;
-                    lexed_tokens.push(Token { kind: token_kind.clone(), span: Span { start: position, end: position+1 } });
+                    lexed_tokens.push(Token {
+                        kind: token_kind.clone(),
+                        span: Span {
+                            start: position,
+                            end: position + 1,
+                        },
+                    });
                     LexanizerState::SpaceNeeding
                 }
             };
@@ -407,6 +469,6 @@ pub fn lexanize(file: &mut File) -> Result<Vec<Token>, LexanizerError> {
     }
 
     // handle end state
-    handle_string_end(lexanizer_state, &mut lexed_tokens, &keyword_map,position)?;
+    handle_string_end(lexanizer_state, &mut lexed_tokens, &keyword_map, position)?;
     return Ok(lexed_tokens);
 }
