@@ -124,7 +124,7 @@ impl LexTable {
     }
 
     /// lookup byte in LexTable
-    pub fn classify(&self, byte: char) -> &LexTableEntry {
+    pub fn classify(&self, byte: u8) -> &LexTableEntry {
         &self.entries[byte as usize]
     }
 }
