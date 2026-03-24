@@ -7,8 +7,9 @@ mod tests {
 
     #[test]
     fn test_lexanization_simple_test_file() {
-        let mut file = File::open("tests/example_files/simple_test.ms").unwrap();
-        let lex_vec = lexanize(&mut file).unwrap();
+        let filepath = "tests/example_files/simple_test.ms";
+        let input_str = std::fs::read_to_string(filepath).unwrap();
+        let lex_vec = lexanize(&input_str).unwrap();
 
         let simple_test_file_vec = vec![
             Token{kind:TokenKind::Let,span:Span{start:0,end:3}},
