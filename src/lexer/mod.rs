@@ -1,4 +1,5 @@
-use std::{collections::HashMap, fs::File, io::Read};
+use std::fmt;
+use std::{collections::HashMap, error::Error, fmt::Display, fs::File, io::Read};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 /// Span for token start and end
@@ -107,7 +108,7 @@ pub enum LexTableEntry {
 
 #[derive(Debug, Clone, PartialEq)]
 /// LexTable is a O(1) lookup table for what kind of byte it is
-/// 
+///
 /// The LexTable is build when crating the new instance and accessed via classify
 pub struct LexTable {
     entries: [LexTableEntry; 256],
@@ -216,12 +217,27 @@ impl LexTable {
 
 #[derive(Debug, Clone)]
 /// Errors that can occur during the lexanizer process
-pub enum LexanizerError {
-    UnkownCharacter(char, usize),
-    UnexpectedCharacter(char, usize),
+pub enum LexErrorKind {
+    UnkownCharacter(char),
+    UnexpectedCharacter(char),
     /// Conversion error expected first type (first string) and god last string
     ConversionError(String, String),
 }
+
+#[derive(Debug, Clone)]
+/// LexError struct with kind of error and span that it refers to
+pub struct LexError {
+    pub kind: LexErrorKind,
+    pub span: Span,
+}
+
+impl Display for LexError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Lexical Analysis error on position {} to {}: {:?}",self.span.start,self.span.end,self.kind)
+    }
+}
+
+impl Error for LexError {}
 
 /// lexanizer function transfor file into token vector
 ///
@@ -233,7 +249,7 @@ pub enum LexanizerError {
 /// let token_vec = lexanize(file)?;
 /// ```
 ///
-pub fn lexanize(file: &mut File) -> Result<Vec<Token>, LexanizerError> {
+pub fn lexanize(file: &mut File) -> Result<Vec<Token>, LexError> {
     let mut lexed_tokens: Vec<Token> = Vec::with_capacity(1000);
     let lex_table = LexTable::new();
     let mut buffer = [0; 3000];
@@ -254,16 +270,16 @@ pub fn lexanize(file: &mut File) -> Result<Vec<Token>, LexanizerError> {
         token_vec: &mut Vec<Token>,
         keyword_map: &HashMap<&str, TokenKind>,
         end_position: usize,
-    ) -> Result<(), LexanizerError> {
+    ) -> Result<(), LexError> {
         match state {
             LexanizerState::Number(start_position, number_str) => token_vec.push(Token {
                 kind: TokenKind::Number(match number_str.parse::<isize>() {
                     Ok(number) => number,
                     Err(_) => {
-                        return Err(LexanizerError::ConversionError(
+                        return Err(LexError{kind:LexErrorKind::ConversionError(
                             "number".to_string(),
                             number_str.to_string(),
-                        ));
+                        ),span:Span { start: start_position, end: end_position }});
                     }
                 }),
                 span: Span {
@@ -339,10 +355,13 @@ pub fn lexanize(file: &mut File) -> Result<Vec<Token>, LexanizerError> {
                     LexanizerState::Indent(start_postion, string)
                 }
                 (_, LexTableEntry::Alphabetic) => {
-                    return Err(LexanizerError::UnexpectedCharacter(
-                        next_elem as char,
-                        position,
-                    ));
+                    return Err(LexError {
+                        kind: LexErrorKind::UnexpectedCharacter(next_elem as char),
+                        span: Span {
+                            start: position,
+                            end: position + 1,
+                        },
+                    });
                 }
                 (LexanizerState::Normal, LexTableEntry::Numeric) => {
                     let mut string = String::new();
@@ -354,20 +373,32 @@ pub fn lexanize(file: &mut File) -> Result<Vec<Token>, LexanizerError> {
                     LexanizerState::Number(start_position, string)
                 }
                 (_, LexTableEntry::Numeric) => {
-                    return Err(LexanizerError::UnexpectedCharacter(
-                        next_elem as char,
-                        position,
-                    ));
+                    return Err(LexError {
+                        kind: LexErrorKind::UnexpectedCharacter(next_elem as char),
+                        span: Span {
+                            start: position,
+                            end: position + 1,
+                        },
+                    });
                 }
                 (_, LexTableEntry::Undefined) => {
-                    return Err(LexanizerError::UnkownCharacter(next_elem as char, position));
+                    return Err(LexError {
+                        kind: LexErrorKind::UnkownCharacter(next_elem as char),
+                        span: Span {
+                            start: position,
+                            end: position + 1,
+                        },
+                    });
                 }
                 (LexanizerState::SpaceNeeding, LexTableEntry::Split) => LexanizerState::Normal,
                 (LexanizerState::SpaceNeeding, _) => {
-                    return Err(LexanizerError::UnexpectedCharacter(
-                        next_elem as char,
-                        position,
-                    ));
+                    return Err(LexError {
+                        kind: LexErrorKind::UnexpectedCharacter(next_elem as char),
+                        span: Span {
+                            start: position,
+                            end: position + 1,
+                        },
+                    });
                 }
                 (LexanizerState::Number(start_position, in_string), LexTableEntry::Split) => {
                     handle_string_end(
