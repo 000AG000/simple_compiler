@@ -1,8 +1,10 @@
 /// Table-driven lexer:
-/// - O(1) character classification
-/// - separates classification from state transitions
-use std::fmt;
-use std::{collections::HashMap, error::Error, fmt::Display};
+/// Design decisions:
+/// - operates on ASCII input only
+/// - uses table-driven classification for performance
+/// - uses state machine for token construction
+/// - stores spans instead of copying lexemesuse std::fmt;
+use std::{collections::HashMap, error::Error, fmt, fmt::Display};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 /// Span for token start and end
@@ -18,7 +20,7 @@ pub struct Token {
     pub span: Span,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 /// Token used for the lexing process
 pub enum TokenKind {
     // Keyword like Tokens with meaning
@@ -122,13 +124,16 @@ impl LexTable {
     pub fn new() -> Self {
         let mut entries = [const { LexTableEntry::Undefined }; 256];
 
+        let char_mask = Self::get_char_mask();
+        let space_mask = Self::get_char_needing_space_mask();
+
         for i in 0..u8::MAX {
             match char::from_u32(i as u32) {
                 None => (),
                 Some(char) => match (
                     char,
-                    LexTable::get_char_mask()[i as usize].clone(),
-                    LexTable::get_char_needing_space_mask()[i as usize].clone(),
+                    char_mask[i as usize].clone(),
+                    space_mask[i as usize].clone(),
                 ) {
                     ('a'..'z', ..) => entries[i as usize] = LexTableEntry::Alphabetic,
                     ('A'..'Z', ..) => entries[i as usize] = LexTableEntry::Alphabetic,
@@ -213,7 +218,7 @@ impl LexTable {
     }
 
     /// lookup byte in LexTable
-    pub fn classify(&self, byte: u8) -> &LexTableEntry {
+    pub fn classify(&self, byte: char) -> &LexTableEntry {
         &self.entries[byte as usize]
     }
 }
@@ -221,7 +226,7 @@ impl LexTable {
 #[derive(Debug, Clone)]
 /// Errors that can occur during the lexanizer process
 pub enum LexErrorKind {
-    UnkownCharacter(char),
+    UnknownCharacter(char),
     UnexpectedCharacter(char),
     /// Conversion error expected first type (first string) and god last string
     ConversionError(String, String),
@@ -253,10 +258,10 @@ impl Error for LexError {}
 /// example usage:
 /// ```
 /// let lex_input = std::fs::read_to_string("filename").unwrap();
-/// let token_vec = lexanize(lex_input)?;
+/// let token_vec = lex(file)?;
 /// ```
 ///
-pub fn lexanize(lex_input: &str) -> Result<Vec<Token>, LexError> {
+pub fn lex(lex_input: &str) -> Result<Vec<Token>, LexError> {
     let mut lexed_tokens: Vec<Token> = Vec::with_capacity(1000);
     let lex_table = LexTable::new();
     let keyword_map = get_keyword_map();
@@ -267,8 +272,8 @@ pub fn lexanize(lex_input: &str) -> Result<Vec<Token>, LexError> {
         SpaceNeeding,
         /// Number(start position, string)
         Number(usize, String),
-        /// Indent(start position, string)
-        Indent(usize, String),
+        /// Ident(start position, string)
+        Ident(usize, String),
     }
 
     fn handle_string_end(
@@ -299,9 +304,9 @@ pub fn lexanize(lex_input: &str) -> Result<Vec<Token>, LexError> {
                     end: end_position,
                 },
             }),
-            LexState::Indent(start_position, indent) => match keyword_map.get(&indent as &str) {
+            LexState::Ident(start_position, ident) => match keyword_map.get(&ident as &str) {
                 Some(token) => token_vec.push(Token {
-                    kind: token.clone(),
+                    kind: *token,
                     span: Span {
                         start: start_position,
                         end: end_position,
@@ -319,22 +324,19 @@ pub fn lexanize(lex_input: &str) -> Result<Vec<Token>, LexError> {
         }
         Ok(())
     }
-    let mut lexanizer_state = LexState::Normal;
+    let mut lex_state = LexState::Normal;
     let mut position = 0;
     // iterate over file buffer
     for next_elem in lex_input.bytes() {
-        // Non ASCII early return
-        if !next_elem.is_ascii(){
-            return Err(LexError { kind: LexErrorKind::UnkownCharacter(next_elem as char), span: Span { start: position, end: position+1 } })
-        } 
+        let c = next_elem as char;
 
-        let lex_entry = lex_table.classify(next_elem);
+        let lex_entry = lex_table.classify(c);
 
-        lexanizer_state = match (lexanizer_state, lex_entry) {
+        lex_state = match (lex_state, lex_entry) {
             (LexState::Normal, LexTableEntry::Split) => LexState::Normal,
             (LexState::Normal, LexTableEntry::Token(token)) => {
                 lexed_tokens.push(Token {
-                    kind: token.clone(),
+                    kind: *token,
                     span: Span {
                         start: position,
                         end: position + 1,
@@ -344,7 +346,7 @@ pub fn lexanize(lex_input: &str) -> Result<Vec<Token>, LexError> {
             }
             (LexState::Normal, LexTableEntry::SpaceNeedingToken(token)) => {
                 lexed_tokens.push(Token {
-                    kind: token.clone(),
+                    kind: *token,
                     span: Span {
                         start: position,
                         end: position + 1,
@@ -354,16 +356,16 @@ pub fn lexanize(lex_input: &str) -> Result<Vec<Token>, LexError> {
             }
             (LexState::Normal, LexTableEntry::Alphabetic) => {
                 let mut string = String::new();
-                string.push(next_elem as char);
-                LexState::Indent(position, string)
+                string.push(c as char);
+                LexState::Ident(position, string)
             }
-            (LexState::Indent(start_postion, mut string), LexTableEntry::Alphabetic) => {
-                string.push(next_elem as char);
-                LexState::Indent(start_postion, string)
+            (LexState::Ident(start_postion, mut string), LexTableEntry::Alphabetic) => {
+                string.push(c as char);
+                LexState::Ident(start_postion, string)
             }
             (_, LexTableEntry::Alphabetic) => {
                 return Err(LexError {
-                    kind: LexErrorKind::UnexpectedCharacter(next_elem as char),
+                    kind: LexErrorKind::UnexpectedCharacter(c as char),
                     span: Span {
                         start: position,
                         end: position + 1,
@@ -372,16 +374,16 @@ pub fn lexanize(lex_input: &str) -> Result<Vec<Token>, LexError> {
             }
             (LexState::Normal, LexTableEntry::Numeric) => {
                 let mut string = String::new();
-                string.push(next_elem as char);
+                string.push(c as char);
                 LexState::Number(position, string)
             }
-            (LexState::Indent(start_position, mut string), LexTableEntry::Numeric) => {
-                string.push(next_elem as char);
+            (LexState::Ident(start_position, mut string), LexTableEntry::Numeric) => {
+                string.push(c as char);
                 LexState::Number(start_position, string)
             }
             (_, LexTableEntry::Numeric) => {
                 return Err(LexError {
-                    kind: LexErrorKind::UnexpectedCharacter(next_elem as char),
+                    kind: LexErrorKind::UnexpectedCharacter(c as char),
                     span: Span {
                         start: position,
                         end: position + 1,
@@ -390,7 +392,7 @@ pub fn lexanize(lex_input: &str) -> Result<Vec<Token>, LexError> {
             }
             (_, LexTableEntry::Undefined) => {
                 return Err(LexError {
-                    kind: LexErrorKind::UnkownCharacter(next_elem as char),
+                    kind: LexErrorKind::UnknownCharacter(c as char),
                     span: Span {
                         start: position,
                         end: position + 1,
@@ -400,7 +402,7 @@ pub fn lexanize(lex_input: &str) -> Result<Vec<Token>, LexError> {
             (LexState::SpaceNeeding, LexTableEntry::Split) => LexState::Normal,
             (LexState::SpaceNeeding, _) => {
                 return Err(LexError {
-                    kind: LexErrorKind::UnexpectedCharacter(next_elem as char),
+                    kind: LexErrorKind::UnexpectedCharacter(c as char),
                     span: Span {
                         start: position,
                         end: position + 1,
@@ -416,9 +418,9 @@ pub fn lexanize(lex_input: &str) -> Result<Vec<Token>, LexError> {
                 )?;
                 LexState::Normal
             }
-            (LexState::Indent(start_position, in_string), LexTableEntry::Split) => {
+            (LexState::Ident(start_position, in_string), LexTableEntry::Split) => {
                 handle_string_end(
-                    LexState::Indent(start_position, in_string),
+                    LexState::Ident(start_position, in_string),
                     &mut lexed_tokens,
                     &keyword_map,
                     position,
@@ -460,9 +462,9 @@ pub fn lexanize(lex_input: &str) -> Result<Vec<Token>, LexError> {
                 });
                 LexState::SpaceNeeding
             }
-            (LexState::Indent(start_position, string), LexTableEntry::Token(token_kind)) => {
+            (LexState::Ident(start_position, string), LexTableEntry::Token(token_kind)) => {
                 handle_string_end(
-                    LexState::Indent(start_position, string),
+                    LexState::Ident(start_position, string),
                     &mut lexed_tokens,
                     &keyword_map,
                     position,
@@ -477,11 +479,11 @@ pub fn lexanize(lex_input: &str) -> Result<Vec<Token>, LexError> {
                 LexState::Normal
             }
             (
-                LexState::Indent(start_position, string),
+                LexState::Ident(start_position, string),
                 LexTableEntry::SpaceNeedingToken(token_kind),
             ) => {
                 handle_string_end(
-                    LexState::Number(start_position, string),
+                    LexState::Ident(start_position, string),
                     &mut lexed_tokens,
                     &keyword_map,
                     start_position,
@@ -496,10 +498,12 @@ pub fn lexanize(lex_input: &str) -> Result<Vec<Token>, LexError> {
                 LexState::SpaceNeeding
             }
         };
+
+        // position is byte index (ASCII-only assumption)
         position += 1;
     }
 
     // handle end state
-    handle_string_end(lexanizer_state, &mut lexed_tokens, &keyword_map, position)?;
+    handle_string_end(lex_state, &mut lexed_tokens, &keyword_map, position)?;
     return Ok(lexed_tokens);
 }

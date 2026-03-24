@@ -1,5 +1,5 @@
 mod lexer;
-pub use lexer::lexanize;
+pub use lexer::lex;
 
 fn main() {
 }

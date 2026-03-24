@@ -1,15 +1,13 @@
 
 #[cfg(test)]
 mod tests {
-    use std::fs::File;
-
-    use simple_compiler::lexer::{TokenKind, lexanize,Token,Span};
+        use simple_compiler::lexer::{TokenKind, lex,Token,Span};
 
     #[test]
     fn test_lexanization_simple_test_file() {
         let filepath = "tests/example_files/simple_test.ms";
         let input_str = std::fs::read_to_string(filepath).unwrap();
-        let lex_vec = lexanize(&input_str).unwrap();
+        let lex_vec = lex(&input_str).unwrap();
 
         let simple_test_file_vec = vec![
             Token{kind:TokenKind::Let,span:Span{start:0,end:3}},
