@@ -40,7 +40,7 @@ pub fn lex(lex_input: &str) -> Result<Vec<Token>, LexError> {
     ) -> Result<(), LexError> {
         match state {
             LexState::Number(start_position, number_str) => token_vec.push(Token {
-                kind: TokenKind::Number(match number_str.parse::<isize>() {
+                kind: TokenKind::Number(match number_str.parse::<usize>() {
                     Ok(number) => number,
                     Err(_) => {
                         return Err(LexError {

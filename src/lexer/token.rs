@@ -49,7 +49,7 @@ pub enum TokenKind {
     Print,
     // Tokens
     Ident,
-    Number(isize),
+    Number(usize),
 }
 
 /// Tokens that are fixed (keywords and single character tokens)
