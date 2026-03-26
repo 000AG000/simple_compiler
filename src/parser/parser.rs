@@ -156,31 +156,11 @@ pub fn parse(input_tokens: &Vec<Token>, input_str: &str) -> Result<Program, Pars
                     TokenKind::Loop => {
                         let mut expected_token_kinds = vec![TokenKind::Ident];
 
-                        // test for Ident token
-                        let mut token = read_next_token(
-                            &mut input_iter,
-                            &expected_token_kinds,
-                            &mut associated_tokens,
-                        )?;
-
-                        let ident = match token {
-                            Token {
-                                kind: TokenKind::Ident,
-                                span: _,
-                            } => parse_context
-                                .classify(token.lexeme(&input_str), &associated_tokens)?,
-                            _ => {
-                                return Err(give_non_expected_token_error(
-                                    &token.kind,
-                                    expected_token_kinds,
-                                    &mut associated_tokens,
-                                ));
-                            }
-                        };
+                        let ident = read_in_ident(&mut input_iter, input_str, &mut associated_tokens, &parse_context)?;
 
                         expected_token_kinds = vec![TokenKind::Do];
 
-                        token = read_next_token(
+                        let token = read_next_token(
                             &mut input_iter,
                             &expected_token_kinds,
                             &mut associated_tokens,
@@ -293,6 +273,7 @@ pub fn parse(input_tokens: &Vec<Token>, input_str: &str) -> Result<Program, Pars
         }
     }
 
+    // check remaining stack and append the statement list of it to the program
     match parse_stack.pop() {
         Some((None, statements)) => {
             program.statements = statements;
