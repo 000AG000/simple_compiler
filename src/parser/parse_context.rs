@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use super::{ParseError, ParseErrorKind};
 /// Parse context used and build up by parser
 /// Context at the moment only contains variable bound to names and no shadowing
-use crate::lexer::{Span,Token};
+use crate::lexer::{Span, Token};
 
 /// Kind of Identificator
 ///
@@ -22,7 +22,7 @@ pub struct Ident {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub(crate) struct ParseContext{
+pub(crate) struct ParseContext {
     next_ident_number: usize,
     ident_mapping: HashMap<String, Ident>,
 }
@@ -36,38 +36,59 @@ impl ParseContext {
     }
 
     /// classify identification string gives None when no identificator bound to it
-    pub fn classify(&self, ident_str: &str) -> Option<Ident> {
-        return self.ident_mapping.get(ident_str).copied();
+    pub fn classify(
+        &self,
+        ident_str: &str,
+        associated_tokens: &Vec<&Token>,
+    ) -> Result<Ident, ParseError> {
+        match self.ident_mapping.get(ident_str).copied() {
+            Some(ident) => Ok(ident),
+            None => {
+                return Err(ParseError {
+                    kind: ParseErrorKind::IdentificatorNotKnown(ident_str.to_string()),
+                    associated_tokens: associated_tokens.iter().map(|t| (*t).clone()).collect(),
+                });
+            }
+        }
     }
 
     /// get the next identification number
     /// - yust adding +1 to the last identification number
-    fn get_next_ident_number(&mut self) -> usize{
+    fn get_next_ident_number(&mut self) -> usize {
         let num = self.next_ident_number;
         self.next_ident_number += 1;
         num
     }
 
-    /// inserts new identification in parse context 
+    /// inserts new identification in parse context
     pub fn new_ident(
         &mut self,
         ident_name: &str,
         ident_kind: IdentKind,
         ident_span: Span,
         token: Token,
-    ) -> Result<(), ParseError> {
+    ) -> Result<Ident, ParseError> {
         let ident_string = ident_name.to_string();
 
         // early return if identificator already defined
-        if let Some(ident) = self.classify(ident_name) {
-            return Err(ParseError { kind: ParseErrorKind::IdentificatorAlreadyUsed(ident_string, ident.span), assotiated_tokens: vec![token] });
+        if self.ident_mapping.contains_key(ident_name) {
+
+            let ident = self.classify(ident_name, &Vec::new())?;
+            return Err(ParseError {
+                kind: ParseErrorKind::IdentificatorAlreadyUsed(ident_string, ident.span),
+                associated_tokens: vec![token],
+            });
         }
 
         let next_ident_number = self.get_next_ident_number();
+        let ident = Ident {
+            ident_number: next_ident_number,
+            kind: ident_kind,
+            span: ident_span,
+        };
+        self.ident_mapping
+            .insert(ident_name.to_string(), ident.clone());
 
-        self.ident_mapping.insert(ident_name.to_string(), Ident { ident_number: next_ident_number, kind: ident_kind, span: ident_span });
-
-
-        Ok(())
+        Ok(ident)
     }
 }
