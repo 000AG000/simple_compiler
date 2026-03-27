@@ -52,7 +52,7 @@ impl ParseError {
             input.len()
         }];
         format!(
-            "error occurred: ...{str_before} here >>> -{str_content} <<<{str_after}...\n {}",
+            "error occurred: ...{str_before} here >>> {str_content} <<<{str_after}...\n {}",
             self
         )
     }

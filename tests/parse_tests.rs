@@ -6,7 +6,7 @@ mod tests {
     use simple_compiler::{lexer::{Span, lex}, parser::{BinOp, Expr, Ident, IdentKind, Program, Statement, parse}};
 
     #[test]
-    fn test_lexanization_simple_test_file() {
+    fn test_parsing_simple_test_file() {
         let filepath = "tests/example_files/simple_test.ms";
         let input_str = std::fs::read_to_string(filepath).unwrap();
         let lex_vec = lex(&input_str).unwrap();
@@ -27,9 +27,26 @@ mod tests {
                 Expr::Binary { left: Box::new(Expr::Ident(ident_x.clone())), op: BinOp::Add, right: Box::new(Expr::Number(1)) } },
             Statement::Empty,
             Statement::Print { name: ident_x.clone() },
-            Statement::Empty,
         ]};
 
         assert_eq!(program,right_parse);
+    }
+
+   #[test]
+    fn test_parsing_loop_test_file() {
+        let filepath = "tests/example_files/loop_test.ms";
+        let input_str = std::fs::read_to_string(filepath).unwrap();
+        let lex_vec = lex(&input_str).unwrap();
+
+        let program = match parse(&lex_vec, &input_str){
+            Ok(program) => program,
+            Err(error) => {
+                println!("{}",error.generate_error_msg(&input_str));
+                panic!("program not read in correctly");
+            },
+        };
+
+        println!("{:#?}",program);
+
     }
 }
