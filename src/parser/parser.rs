@@ -254,6 +254,9 @@ impl<'a> Parser<'a> {
                             span,
                         ));
                     }
+                    TokenKind::EOF =>{
+                        return Err(ParseError { kind: ParseErrorKind::UnexpectedEnd, span:Span{start:self.input.len(),end:self.input.len()} })
+                    }
                     TokenKind::Newline | TokenKind::Semicolon => {
                         self.advance();
                         Statement::Empty
@@ -345,7 +348,10 @@ impl<'a> Parser<'a> {
     pub fn parse_program(&mut self) -> Result<Program, ParseError> {
         let mut statements = Vec::with_capacity(10);
 
-        while self.peek().is_some() {
+        while let Some(token) = self.peek() {
+            // break if end of file token is reached
+            if let Token { kind:TokenKind::EOF,.. } = token {break};
+
             statements.push(self.parse_statement()?);
         }
 
