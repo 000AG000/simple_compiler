@@ -1,3 +1,5 @@
+use crate::lexer::Span;
+
 /// defining the grammatical structure for the parsing process
 
 use super::parse_context::Ident;
@@ -16,8 +18,26 @@ impl Program{
 }
 
 #[derive(Debug,Clone,PartialEq)]
+/// Provides the span context for a generic type T
+/// Used for Parsed Types
+pub struct Spanned<T> {
+    pub node: T,
+    pub span: Span,
+}
+
+impl<T> Spanned<T>{
+    pub fn new(node:T,span:Span) -> Self{
+        Self { node, span }
+    }
+}
+
+pub type Statement = Spanned<StatementKind>;
+pub type Expr = Spanned<ExprKind>;
+pub type BinOp = Spanned<BinOpKind>;
+
+#[derive(Debug,Clone,PartialEq)]
 /// Statement types that can be used in this grammer
-pub enum Statement {
+pub enum StatementKind {
     Let {
         name: Ident,
         value: Option<Expr>,
@@ -37,7 +57,7 @@ pub enum Statement {
 }
 #[derive(Debug,Clone,PartialEq)]
 /// Expression of this grammer
-pub enum Expr {
+pub enum ExprKind {
     Number(usize),
     Ident(Ident),
     Binary {
@@ -49,7 +69,7 @@ pub enum Expr {
 
 #[derive(Debug,Clone,PartialEq)]
 // Binary Operator
-pub enum BinOp {
+pub enum BinOpKind {
     Add,
     Sub,
 }

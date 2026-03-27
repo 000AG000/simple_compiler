@@ -3,8 +3,7 @@ use super::parser_helper_func::*;
 use crate::{
     lexer::{Span, Token, TokenKind},
     parser::{
-        BinOp, Expr, Ident, ParseError, ParseErrorKind, Statement,
-        parse_context::{IdentKind, ParseContext},
+        BinOp, BinOpKind, Expr, ExprKind, Ident, ParseError, ParseErrorKind, Statement, StatementKind, parse_context::{IdentKind, ParseContext}
     },
 };
 
@@ -31,6 +30,17 @@ impl<'a> Parser<'a> {
     pub fn current(&self) -> &Token {
         debug_assert!(self.pos < self.tokens.len());
         &self.tokens[self.pos]
+    }
+
+    /// Retrieve the span of the token before the current
+    /// Used to get the end of the last read in token for
+    /// creating context information for errors
+    pub fn get_previous_token_end(&self) -> usize {
+        if self.pos == 0 {
+            return 0;
+        }; // early return if first token
+
+        return self.tokens[self.pos - 1].span.end;
     }
 
     /// Get Current token and advance to the next token
@@ -80,14 +90,14 @@ impl<'a> Parser<'a> {
             Token {
                 kind: TokenKind::Ident,
                 ..
-            } => Expr::Ident(
+            } => Expr::new(ExprKind::Ident(
                 self.context
                     .classify(token.lexeme(&self.input), token.span)?,
-            ),
+            ),token.span),
             Token {
                 kind: TokenKind::Number(num),
                 ..
-            } => Expr::Number(*num),
+            } => Expr::new(ExprKind::Number(*num),token.span),
             _ => {
                 return Err(give_non_expected_token_error(
                     &token.kind,
@@ -104,24 +114,26 @@ impl<'a> Parser<'a> {
     // Used for fast Expression parsing
     pub fn parse_expr(&mut self) -> Result<Expr, ParseError> {
         let mut expr = self.parse_non_operand_expr()?;
+        let expr_span_start = expr.span.start;
 
         while let Some(Token {
-            kind: token_kind, ..
+            kind: token_kind, span
         }) = self.peek()
         {
             let op = match token_kind {
-                TokenKind::Plus => BinOp::Add,
-                TokenKind::Minus => BinOp::Sub,
+                TokenKind::Plus => BinOp::new(BinOpKind::Add,*span),
+                TokenKind::Minus => BinOp::new(BinOpKind::Sub,*span),
                 _ => break,
             };
             self.advance_position();
 
             let right_expr = self.parse_non_operand_expr()?;
-            expr = Expr::Binary {
+            let expr_span_end = right_expr.span.end;
+            expr = Expr::new(ExprKind::Binary {
                 left: Box::new(expr),
                 op,
                 right: Box::new(right_expr),
-            };
+            },Span { start: expr_span_start, end: expr_span_end });
         }
 
         Ok(expr)
@@ -210,17 +222,19 @@ impl<'a> Parser<'a> {
                 }
                 TokenKind::Newline | TokenKind::Semicolon => {
                     self.advance_position();
-                    Statement::Empty
+                    Statement::new(StatementKind::Empty, span)
                 }
 
-                TokenKind::Loop => {
-                    self.parse_loop()?
-                }
+                TokenKind::Loop => self.parse_loop()?,
                 TokenKind::Print => {
                     self.advance_position();
                     let ident = self.parse_ident()?;
                     self.parse_statement_end()?;
-                    Statement::Print { name: ident }
+                    let statement_span = Span {
+                        start: span.start,
+                        end: self.get_previous_token_end(),
+                    };
+                    Statement::new(StatementKind::Print { name: ident }, statement_span)
                 }
                 TokenKind::Ident => {
                     let ident = self.parse_ident()?;
@@ -229,11 +243,15 @@ impl<'a> Parser<'a> {
                     let expr = self.parse_expr()?;
 
                     self.parse_statement_end()?;
+                    let statement_span = Span {
+                        start: span.start,
+                        end: self.get_previous_token_end(),
+                    };
 
-                    Statement::Assign {
+                    Statement::new(StatementKind::Assign {
                         name: ident,
                         value: expr,
-                    }
+                    },statement_span)
                 }
             },
         })
@@ -245,7 +263,7 @@ impl<'a> Parser<'a> {
     pub fn parse_program(&mut self) -> Result<Program, ParseError> {
         let mut statements = Vec::with_capacity(10);
 
-        while self.current().kind != TokenKind::EOF{
+        while self.current().kind != TokenKind::EOF {
             statements.push(self.parse_statement()?);
         }
 
@@ -278,12 +296,12 @@ impl<'a> Parser<'a> {
                 kind: TokenKind::Semicolon | TokenKind::Newline,
                 ..
             } => {
-                self.advance_position();
-                let new_statement = Statement::Let {
+                let new_statement = Statement::new(StatementKind::Let {
                     name: ident,
                     value: None,
-                };
+                },Span { start: let_token_span.start, end: token.span.end });
 
+                self.advance_position();
                 return Ok(new_statement);
             }
             Token {
@@ -304,18 +322,18 @@ impl<'a> Parser<'a> {
 
         self.parse_statement_end()?;
 
-        Ok(Statement::Let {
+        Ok(Statement::new(StatementKind::Let {
             name: ident,
             value: Some(expr),
-        })
+        },Span { start: let_token_span.start, end: self.get_previous_token_end() }))
     }
 
     /// Consumes the next tokens bound to a loop statement
     /// Return ParseError when not able to parse loop statement
     /// Used as shorthand for parsing statement function
     pub fn parse_loop(&mut self) -> Result<Statement, ParseError> {
+        let loop_span = self.current().span;
         self.advance_position();
-
 
         let ident = self.parse_ident()?;
 
@@ -356,16 +374,19 @@ impl<'a> Parser<'a> {
                             TokenKind::Ident,
                             TokenKind::Print,
                         ]),
-                        span:Span{start:self.input.len(),end:self.input.len()},
+                        span: Span {
+                            start: self.input.len(),
+                            end: self.input.len(),
+                        },
                     });
                 }
             }
         }
 
-        Ok(Statement::Loop {
+        Ok(Statement::new(StatementKind::Loop {
             var: ident,
             body: loop_statements,
-        })
+        },Span { start: loop_span.start, end: self.get_previous_token_end() }))
     }
 }
 

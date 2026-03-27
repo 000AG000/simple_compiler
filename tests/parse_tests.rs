@@ -3,7 +3,13 @@
 #[cfg(test)]
 mod tests {
 
-    use simple_compiler::{lexer::{Span, lex}, parser::{BinOp, Expr, Ident, IdentKind, Program, Statement, parse}};
+    use simple_compiler::{
+        lexer::{Span, lex},
+        parser::{
+            BinOp, BinOpKind, Expr, ExprKind, Ident, IdentKind, Program, Statement, StatementKind,
+            parse,
+        },
+    };
 
     #[test]
     fn test_parsing_simple_test_file() {
@@ -11,42 +17,76 @@ mod tests {
         let input_str = std::fs::read_to_string(filepath).unwrap();
         let lex_vec = lex(&input_str).unwrap();
 
-        let program = match parse(&lex_vec, &input_str){
+        let program = match parse(&lex_vec, &input_str) {
             Ok(program) => program,
             Err(error) => {
-                println!("{}",error.generate_error_msg(&input_str));
+                println!("{}", error.generate_error_msg(&input_str));
                 panic!("program not read in correctly");
-            },
+            }
         };
 
-        let ident_x = Ident { ident_number: 0, kind: IdentKind::Variable, span: Span{start:0,end:5}};
-        let right_parse = Program{ statements:vec![
-            Statement::Let { name:  ident_x.clone(), value: Some(Expr::Number(0)) },
-            Statement::Empty,
-            Statement::Assign { name: ident_x.clone(), value: 
-                Expr::Binary { left: Box::new(Expr::Ident(ident_x.clone())), op: BinOp::Add, right: Box::new(Expr::Number(1)) } },
-            Statement::Empty,
-            Statement::Print { name: ident_x.clone() },
-        ]};
+        let ident_x = Ident {
+            ident_number: 0,
+            kind: IdentKind::Variable,
+            span: Span { start: 0, end: 5 },
+        };
+        let right_parse = Program {
+            statements: vec![
+                Statement::new(
+                    StatementKind::Let {
+                        name: ident_x.clone(),
+                        value: Some(Expr::new(ExprKind::Number(0), Span { start: 8, end: 9 })),
+                    },
+                    Span { start: 0, end: 10 },
+                ),
+                Statement::new(StatementKind::Empty, Span { start: 10, end: 11 }),
+                Statement::new(
+                    StatementKind::Assign {
+                        name: ident_x.clone(),
+                        value: Expr::new(
+                            ExprKind::Binary {
+                                left: Box::new(Expr::new(
+                                    ExprKind::Ident(ident_x.clone()),
+                                    Span { start: 15, end: 16 },
+                                )),
+                                op: BinOp::new(BinOpKind::Add, Span { start: 17, end: 18 }),
+                                right: Box::new(Expr::new(
+                                    ExprKind::Number(1),
+                                    Span { start: 19, end: 20 },
+                                )),
+                            },
+                            Span { start: 15, end: 20 },
+                        ),
+                    },
+                    Span { start: 11, end: 21 },
+                ),
+                Statement::new(StatementKind::Empty, Span { start: 21, end: 22 }),
+                Statement::new(
+                    StatementKind::Print {
+                        name: ident_x.clone(),
+                    },
+                    Span { start: 22, end: 30 },
+                ),
+            ],
+        };
 
-        assert_eq!(program,right_parse);
+        assert_eq!(program, right_parse);
     }
 
-   #[test]
+    #[test]
     fn test_parsing_loop_test_file() {
         let filepath = "tests/example_files/loop_test.ms";
         let input_str = std::fs::read_to_string(filepath).unwrap();
         let lex_vec = lex(&input_str).unwrap();
 
-        let program = match parse(&lex_vec, &input_str){
+        let program = match parse(&lex_vec, &input_str) {
             Ok(program) => program,
             Err(error) => {
-                println!("{}",error.generate_error_msg(&input_str));
+                println!("{}", error.generate_error_msg(&input_str));
                 panic!("program not read in correctly");
-            },
+            }
         };
 
-        println!("{:#?}",program);
-
+        println!("{:#?}", program);
     }
 }
