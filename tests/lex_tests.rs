@@ -21,7 +21,8 @@ mod tests {
     fn test_empty() {
         let input = "";
         let tokens = lex(input).unwrap();
-        assert!(tokens.is_empty());
+        let eof_tokens = vec![Token{kind:TokenKind::EOF,span:Span{start:0,end:0}}];
+        assert_eq!(tokens, eof_tokens);
     }
 
     #[test]
@@ -29,7 +30,7 @@ mod tests {
         let input = "let x = 5;";
         let tokens = lex(input).unwrap();
 
-        assert_eq!(tokens.len(), 5);
+        assert_eq!(tokens.len(), 6);
     }
 
     #[test]
@@ -103,6 +104,10 @@ mod tests {
                 kind: TokenKind::Semicolon,
                 span: Span { start: 29, end: 30 },
             },
+             Token {
+                kind: TokenKind::EOF,
+                span: Span { start: 30, end: 30 },
+            },           
         ];
 
         assert_eq!(lex_vec, simple_test_file_vec);

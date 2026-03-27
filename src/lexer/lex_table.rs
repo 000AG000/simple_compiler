@@ -4,7 +4,7 @@
 /// 
 
 
-use crate::lexer::token::{TokenKind,CONSTANT_TOKENS,BoundTokenKeyword,get_token_keyword};
+use crate::lexer::token::{TokenKind,CONSTANT_TOKENS,BoundTokenKeyword,get_token_keyword,get_token_kind_clone};
 
 
 #[derive(Debug, Clone, PartialEq)]
@@ -67,20 +67,7 @@ impl LexTable {
         while i < CONSTANT_TOKENS.len() {
             match get_token_keyword(&CONSTANT_TOKENS[i]) {
                 BoundTokenKeyword::Char(c) => {
-                    lex_table[c as usize] = Some(match &CONSTANT_TOKENS[i] {
-                        TokenKind::Let => TokenKind::Let,
-                        TokenKind::Equal => TokenKind::Equal,
-                        TokenKind::Plus => TokenKind::Plus,
-                        TokenKind::Minus => TokenKind::Minus,
-                        TokenKind::Newline => TokenKind::Newline,
-                        TokenKind::Semicolon => TokenKind::Semicolon,
-                        TokenKind::Loop => TokenKind::Loop,
-                        TokenKind::End => TokenKind::End,
-                        TokenKind::Do => TokenKind::Do,
-                        TokenKind::Print => TokenKind::Print,
-                        TokenKind::Ident => TokenKind::Ident,
-                        TokenKind::Number(x) => TokenKind::Number(*x),
-                    });
+                    lex_table[c as usize] = Some(get_token_kind_clone(&CONSTANT_TOKENS[i]));
                 }
                 _ => {}
             }
@@ -100,20 +87,7 @@ impl LexTable {
         while i < CONSTANT_TOKENS.len() {
             match get_token_keyword(&CONSTANT_TOKENS[i]) {
                 BoundTokenKeyword::CharWithNeededSpace(c) => {
-                    lex_table[c as usize] = Some(match &CONSTANT_TOKENS[i] {
-                        TokenKind::Let => TokenKind::Let,
-                        TokenKind::Equal => TokenKind::Equal,
-                        TokenKind::Plus => TokenKind::Plus,
-                        TokenKind::Minus => TokenKind::Minus,
-                        TokenKind::Newline => TokenKind::Newline,
-                        TokenKind::Semicolon => TokenKind::Semicolon,
-                        TokenKind::Loop => TokenKind::Loop,
-                        TokenKind::End => TokenKind::End,
-                        TokenKind::Do => TokenKind::Do,
-                        TokenKind::Print => TokenKind::Print,
-                        TokenKind::Ident => TokenKind::Ident,
-                        TokenKind::Number(x) => TokenKind::Number(*x),
-                    });
+                    lex_table[c as usize] = Some(get_token_kind_clone(&CONSTANT_TOKENS[i]));
                 }
                 _ => {}
             }

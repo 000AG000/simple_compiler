@@ -265,5 +265,8 @@ pub fn lex(lex_input: &str) -> Result<Vec<Token>, LexError> {
 
     // handle end state
     handle_string_end(lex_state, &mut lexed_tokens, &keyword_map, position)?;
+
+    // add end of file token
+    lexed_tokens.push(Token { kind: TokenKind::EOF, span: Span { start: lex_input.len() , end:  lex_input.len()}});
     return Ok(lexed_tokens);
 }
