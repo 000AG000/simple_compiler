@@ -1,5 +1,5 @@
 use crate::lexer::Span;
-use crate::lexer::{Token, TokenKind};
+use crate::lexer::{ TokenKind};
 /// parse_error
 /// Defines the Parse Error struct that saves the error type and the Span associated with the error
 use std::{error::Error, fmt, fmt::Display};
@@ -31,35 +31,25 @@ pub enum ParseErrorKind {
 /// LexError struct with kind of error and tokens that it refers to
 pub struct ParseError {
     pub kind: ParseErrorKind,
-    /// assotiated tokens where error occurs
-    pub associated_tokens: Vec<Token>,
+    /// assotiated span where the error occures
+    pub span: Span,
 }
 
 impl Display for ParseError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let start_position = self.associated_tokens.first().map(|t| t.span.start);
-        let end_position = self.associated_tokens.last().map(|t| t.span.end);
-
-        let start = match start_position {
-            Some(position) => position.to_string(),
-            None => "(not known)".to_string(),
-        };
-
-        let end = match end_position {
-            Some(position) => position.to_string(),
-            None => "(not known)".to_string(),
-        };
+        let start = self.span.start;
+        let end= self.span.end;
 
         match &self.kind {
             ParseErrorKind::NonExpectedToken(token_expect, token_gotten) => write!(
                 f,
-                "Parsing error: Got non expected token {:?} at position {} to  {} expected on of these tokens: {:?}",
-                token_gotten, start, end, token_expect
+                "Parsing error: Got non expected token {:?}, expected on of these tokens: {:?}",
+                token_gotten, token_expect
             ),
             ParseErrorKind::IdentificatorAlreadyUsed(ident_name, span) => write!(
                 f,
-                "Parsing error: Identificator \"{}\" newly defined at position {} to {} already in use. First defined at {} to {}",
-                ident_name, start, end, span.start, span.end
+                "Parsing error: Identificator \"{}\" already in use.",
+                ident_name
             ),
             ParseErrorKind::UnexpectedEOF(token_expect) => write!(
                 f,
@@ -78,13 +68,11 @@ impl Display for ParseError {
             ),
             ParseErrorKind::UnclosedLoop(span) => write!(
                 f,
-                "Parsing error: Unclosed loop start at position {} to {}",
-                span.start,span.end,
+                "Parsing error: Unclosed loop",
             ),
             ParseErrorKind::UnexpectedEnd(span) => write!(
                 f,
-                "Parsing error: Unexpeted loop end at position {} to {}",
-                span.start,span.end,
+                "Parsing error: Unexpeted loop end",
             ),
                     }
     }
