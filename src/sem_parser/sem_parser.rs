@@ -1,9 +1,9 @@
-use super::parser_helper_func::*;
+use super::sem_parser_helper_func::*;
 
 use crate::{
     lexer::{Span, Token, TokenKind},
-    parser::{
-        BinOp, BinOpKind, Expr, ExprKind, Ident, ParseError, ParseErrorKind, Statement, StatementKind, parse_context::{IdentKind, ParseContext}
+    sem_parser::{
+        BinOp, BinOpKind, Expr, ExprKind, Ident, ParseError, ParseErrorKind, Statement, StatementKind, sem_parse_context::{IdentKind, ParseContext}
     },
 };
 

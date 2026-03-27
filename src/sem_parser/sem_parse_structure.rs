@@ -2,7 +2,7 @@ use crate::lexer::Span;
 
 /// defining the grammatical structure for the parsing process
 
-use super::parse_context::Ident;
+use super::sem_parse_context::Ident;
 
 #[derive(Debug,Clone,PartialEq)]
 /// sturct for a whole program

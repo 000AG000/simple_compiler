@@ -18,7 +18,7 @@ STATEMENT ->
   | EMPTY
 
 EXPRESSION ->
-    TERM (("+" | "-") TERM)*
+    TERM (("+" | "-") TERM)* // will be calculated from left to right
 
 TERM ->
     NUMBER | IDENT
@@ -34,3 +34,10 @@ When interpeters need to interpret a huge amounts of code it would be unwise to 
 ## Parser ideas
 
 Make the language simple so you only need a minimal number of peeks forward
+
+## Semantic analisys
+So simple it is hidden in the Parser
+
+## Interpeter ideas
+
+- build 

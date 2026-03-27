@@ -1,6 +1,6 @@
 use crate::{
     lexer::{Span, TokenKind},
-    parser::{
+    sem_parser::{
         ParseError, ParseErrorKind,
     },
 };

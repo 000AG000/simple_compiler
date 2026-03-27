@@ -5,7 +5,7 @@ mod tests {
 
     use simple_compiler::{
         lexer::{Span, lex},
-        parser::{
+        sem_parser::{
             BinOp, BinOpKind, Expr, ExprKind, Ident, IdentKind, Program, Statement, StatementKind,
             parse,
         },
