@@ -29,14 +29,15 @@ impl<'a> Parser<'a> {
     }
 
     pub fn current(&self) -> &Token {
+        debug_assert!(self.pos < self.tokens.len());
         &self.tokens[self.pos]
     }
 
     /// Get Current token and advance to the next token
     /// Own function because it is offen used
-    pub fn next(&mut self) -> &Token {
+    pub fn bump(&mut self) -> &Token {
         let pos = self.pos;
-        self.advance();
+        self.advance_position();
         &self.tokens[pos]
     }
 
@@ -44,7 +45,7 @@ impl<'a> Parser<'a> {
         self.tokens.get(self.pos)
     }
 
-    pub fn advance(&mut self) {
+    pub fn advance_position(&mut self) {
         self.pos += 1;
     }
 
@@ -54,12 +55,12 @@ impl<'a> Parser<'a> {
     pub fn expect(&mut self, kind: TokenKind) -> Result<Token, ParseError> {
         let token = self.current().clone();
         if token.kind == kind {
-            self.advance();
+            self.advance_position();
             Ok(token)
         }
         // handle TokenKind with data separatly
         else if let (TokenKind::Number(_), TokenKind::Number(_)) = (token.kind, kind) {
-            self.advance();
+            self.advance_position();
             Ok(token)
         } else {
             Err(ParseError {
@@ -95,7 +96,7 @@ impl<'a> Parser<'a> {
                 ));
             }
         });
-        self.advance();
+        self.advance_position();
         ret
     }
 
@@ -113,7 +114,7 @@ impl<'a> Parser<'a> {
                 TokenKind::Minus => BinOp::Sub,
                 _ => break,
             };
-            self.advance();
+            self.advance_position();
 
             let right_expr = self.parse_non_operand_expr()?;
             expr = Expr::Binary {
@@ -129,7 +130,7 @@ impl<'a> Parser<'a> {
     /// Consumes next Seimicolon or Newline
     /// Returns NonExpectedTokenError when reading any other TokenKind
     pub fn parse_statement_end(&mut self) -> Result<(), ParseError> {
-        let token = self.next();
+        let token = self.bump();
 
         match token {
             Token {
@@ -168,7 +169,7 @@ impl<'a> Parser<'a> {
             }
         };
 
-        self.advance();
+        self.advance_position();
 
         ret
     }
@@ -179,166 +180,62 @@ impl<'a> Parser<'a> {
     pub fn parse_statement(&mut self) -> Result<Statement, ParseError> {
         let start_token = self.current();
         Ok(match (start_token.span, start_token.kind) {
-            (span, token_kind) => {
-                match token_kind {
-                    TokenKind::Let => 'let_stm: {
-                        self.advance();
-                        // test for Ident token
-                        let token = self.expect(TokenKind::Ident)?;
+            (span, token_kind) => match token_kind {
+                TokenKind::Let => self.parse_let(start_token.span)?,
+                kind @ (TokenKind::Equal
+                | TokenKind::Plus
+                | TokenKind::Minus
+                | TokenKind::Do
+                | TokenKind::End
+                | TokenKind::Number(_)) => {
+                    return Err(give_non_expected_token_error(
+                        &kind,
+                        vec![
+                            TokenKind::Let,
+                            TokenKind::Loop,
+                            TokenKind::Print,
+                            TokenKind::Ident,
+                        ],
+                        span,
+                    ));
+                }
+                TokenKind::EOF => {
+                    return Err(ParseError {
+                        kind: ParseErrorKind::UnexpectedEnd,
+                        span: Span {
+                            start: self.input.len(),
+                            end: self.input.len(),
+                        },
+                    });
+                }
+                TokenKind::Newline | TokenKind::Semicolon => {
+                    self.advance_position();
+                    Statement::Empty
+                }
 
-                        let ident = self.context.new_ident(
-                            token.lexeme(self.input),
-                            IdentKind::Variable,
-                            Span {
-                                start: span.start,
-                                end: token.span.end,
-                            },
-                        )?;
+                TokenKind::Loop => {
+                    self.parse_loop()?
+                }
+                TokenKind::Print => {
+                    self.advance_position();
+                    let ident = self.parse_ident()?;
+                    self.parse_statement_end()?;
+                    Statement::Print { name: ident }
+                }
+                TokenKind::Ident => {
+                    let ident = self.parse_ident()?;
+                    self.expect(TokenKind::Equal)?;
 
-                        let token = self.current();
+                    let expr = self.parse_expr()?;
 
-                        match token {
-                            Token {
-                                kind: TokenKind::Semicolon | TokenKind::Newline,
-                                ..
-                            } => {
-                                self.advance();
-                                let new_statement = Statement::Let {
-                                    name: ident,
-                                    value: None,
-                                };
+                    self.parse_statement_end()?;
 
-                                break 'let_stm new_statement;
-                            }
-                            Token {
-                                kind: TokenKind::Equal,
-                                ..
-                            } => self.advance(),
-
-                            token => {
-                                return Err(give_non_expected_token_error(
-                                    &token.kind,
-                                    vec![
-                                        TokenKind::Semicolon,
-                                        TokenKind::Newline,
-                                        TokenKind::Equal,
-                                    ],
-                                    token.span,
-                                ));
-                            }
-                        }
-
-                        let expr = self.parse_expr()?;
-
-                        self.parse_statement_end()?;
-
-                        Statement::Let {
-                            name: ident,
-                            value: Some(expr),
-                        }
-                    }
-                    kind @ (TokenKind::Equal
-                    | TokenKind::Plus
-                    | TokenKind::Minus
-                    | TokenKind::Do
-                    | TokenKind::End
-                    | TokenKind::Number(_)) => {
-                        return Err(give_non_expected_token_error(
-                            &kind,
-                            vec![
-                                TokenKind::Let,
-                                TokenKind::Loop,
-                                TokenKind::Print,
-                                TokenKind::Ident,
-                            ],
-                            span,
-                        ));
-                    }
-                    TokenKind::EOF =>{
-                        return Err(ParseError { kind: ParseErrorKind::UnexpectedEnd, span:Span{start:self.input.len(),end:self.input.len()} })
-                    }
-                    TokenKind::Newline | TokenKind::Semicolon => {
-                        self.advance();
-                        Statement::Empty
-                    },
-
-                    TokenKind::Loop => {
-                        self.advance();
-                        let mut expected_token_kinds = vec![TokenKind::Ident];
-
-                        let ident = self.parse_ident()?;
-
-                        expected_token_kinds = vec![TokenKind::Do];
-
-                        let token = self.next();
-
-                        match token {
-                            Token {
-                                kind: TokenKind::Do,
-                                span: _,
-                            } => (),
-                            _ => {
-                                return Err(give_non_expected_token_error(
-                                    &token_kind,
-                                    expected_token_kinds,
-                                    span,
-                                ));
-                            }
-                        }
-
-                        let mut loop_statements = Vec::new();
-
-                        loop {
-                            match self.peek() {
-                                Some(Token {
-                                    kind: TokenKind::End,
-                                    ..
-                                }) => {
-                                    self.advance();
-                                    break;
-                                }
-                                Some(_) => loop_statements.push(self.parse_statement()?),
-                                None => {
-                                    return Err(ParseError {
-                                        kind: ParseErrorKind::UnexpectedEOF(vec![
-                                            TokenKind::Let,
-                                            TokenKind::Loop,
-                                            TokenKind::End,
-                                            TokenKind::Ident,
-                                            TokenKind::Print,
-                                        ]),
-                                        span,
-                                    });
-                                }
-                            }
-                        }
-
-                        Statement::Loop {
-                            var: ident,
-                            body: loop_statements,
-                        }
-                    }
-                    TokenKind::Print => {
-                        self.advance();
-                        let ident = self.parse_ident()?;
-                        self.parse_statement_end()?;
-                        Statement::Print { name: ident }
-                    }
-                    TokenKind::Ident => {
-                        let ident = self.parse_ident()?;
-                        self.expect(TokenKind::Equal)?;
-
-                        let expr = self.parse_expr()?;
-
-                        self.parse_statement_end()?;
-
-                        Statement::Assign {
-                            name: ident,
-                            value: expr,
-                        }
+                    Statement::Assign {
+                        name: ident,
+                        value: expr,
                     }
                 }
-            }
+            },
         })
     }
 
@@ -348,15 +245,126 @@ impl<'a> Parser<'a> {
     pub fn parse_program(&mut self) -> Result<Program, ParseError> {
         let mut statements = Vec::with_capacity(10);
 
-        while let Some(token) = self.peek() {
-            // break if end of file token is reached
-            if let Token { kind:TokenKind::EOF,.. } = token {break};
-
+        while self.current().kind != TokenKind::EOF{
             statements.push(self.parse_statement()?);
         }
 
         Ok(Program {
             statements: statements,
+        })
+    }
+
+    /// Consumes the next tokens bound to a let statement
+    /// Return ParseError when not able to parse let statement
+    /// Used as shorthand for parsing statement function
+    pub fn parse_let(&mut self, let_token_span: Span) -> Result<Statement, ParseError> {
+        self.advance_position();
+        // test for Ident token
+        let token = self.expect(TokenKind::Ident)?;
+
+        let ident = self.context.new_ident(
+            token.lexeme(self.input),
+            IdentKind::Variable,
+            Span {
+                start: let_token_span.start,
+                end: token.span.end,
+            },
+        )?;
+
+        let token = self.current();
+
+        match token {
+            Token {
+                kind: TokenKind::Semicolon | TokenKind::Newline,
+                ..
+            } => {
+                self.advance_position();
+                let new_statement = Statement::Let {
+                    name: ident,
+                    value: None,
+                };
+
+                return Ok(new_statement);
+            }
+            Token {
+                kind: TokenKind::Equal,
+                ..
+            } => self.advance_position(),
+
+            token => {
+                return Err(give_non_expected_token_error(
+                    &token.kind,
+                    vec![TokenKind::Semicolon, TokenKind::Newline, TokenKind::Equal],
+                    token.span,
+                ));
+            }
+        }
+
+        let expr = self.parse_expr()?;
+
+        self.parse_statement_end()?;
+
+        Ok(Statement::Let {
+            name: ident,
+            value: Some(expr),
+        })
+    }
+
+    /// Consumes the next tokens bound to a loop statement
+    /// Return ParseError when not able to parse loop statement
+    /// Used as shorthand for parsing statement function
+    pub fn parse_loop(&mut self) -> Result<Statement, ParseError> {
+        self.advance_position();
+
+
+        let ident = self.parse_ident()?;
+
+        let token = self.bump();
+
+        match token {
+            Token {
+                kind: TokenKind::Do,
+                ..
+            } => (),
+            Token { kind: _, span } => {
+                return Err(give_non_expected_token_error(
+                    &token.kind,
+                    vec![TokenKind::Do],
+                    *span,
+                ));
+            }
+        }
+
+        let mut loop_statements = Vec::new();
+
+        loop {
+            match self.peek() {
+                Some(Token {
+                    kind: TokenKind::End,
+                    ..
+                }) => {
+                    self.advance_position();
+                    break;
+                }
+                Some(_) => loop_statements.push(self.parse_statement()?),
+                None => {
+                    return Err(ParseError {
+                        kind: ParseErrorKind::UnexpectedEOF(vec![
+                            TokenKind::Let,
+                            TokenKind::Loop,
+                            TokenKind::End,
+                            TokenKind::Ident,
+                            TokenKind::Print,
+                        ]),
+                        span:Span{start:self.input.len(),end:self.input.len()},
+                    });
+                }
+            }
+        }
+
+        Ok(Statement::Loop {
+            var: ident,
+            body: loop_statements,
         })
     }
 }
@@ -367,7 +375,7 @@ impl<'a> Parser<'a> {
 /// - parsers uses stack to see in what loop the statements needs to be added
 /// - build up parse context for storing information like variables
 
-pub fn parse(input_tokens: &Vec<Token>, input_str: &str) -> Result<Program, ParseError> {
+pub fn parse(input_tokens: &[Token], input_str: &str) -> Result<Program, ParseError> {
     let parse_context = ParseContext::new();
 
     let mut parser: Parser = Parser::new(input_tokens, input_str, parse_context);
