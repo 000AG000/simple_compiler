@@ -41,9 +41,9 @@ impl LexTable {
                     char_mask[i as usize].clone(),
                     space_mask[i as usize].clone(),
                 ) {
-                    ('a'..'z', ..) => entries[i as usize] = LexTableEntry::Alphabetic,
-                    ('A'..'Z', ..) => entries[i as usize] = LexTableEntry::Alphabetic,
-                    ('0'..'9', ..) => entries[i as usize] = LexTableEntry::Numeric,
+                    ('a'..='z', ..) => entries[i as usize] = LexTableEntry::Alphabetic,
+                    ('A'..='Z', ..) => entries[i as usize] = LexTableEntry::Alphabetic,
+                    ('0'..='9', ..) => entries[i as usize] = LexTableEntry::Numeric,
                     (' ', ..) => entries[i as usize] = LexTableEntry::Split,
                     (_, Some(token), _) => entries[i as usize] = LexTableEntry::Token(token),
                     (_, _, Some(token)) => {
