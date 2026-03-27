@@ -1,4 +1,3 @@
-
 use crate::{
     lexer::{Span, TokenKind},
     parser::{
@@ -8,9 +7,7 @@ use crate::{
 
 
 
-
-
-/// give non expected token error
+/// Small helper function for creating NonExpectedToken Errors
 pub fn give_non_expected_token_error(
     got_token_kind: &TokenKind,
     expected_token_kinds: Vec<TokenKind>,
