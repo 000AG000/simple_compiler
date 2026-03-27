@@ -50,6 +50,7 @@ pub enum TokenKind {
     // Tokens
     Ident,
     Number(usize),
+    EOF,
 }
 
 /// Tokens that are fixed (keywords and single character tokens)
@@ -84,6 +85,26 @@ pub(crate) enum BoundTokenKeyword {
     String(&'static str),
 }
 
+/// Generate extract TokenKind &TokenKind as clone
+/// Used when clone isn't possible in constant functions
+pub(crate) const fn get_token_kind_clone(token: &TokenKind) -> TokenKind {
+    match token {
+        TokenKind::Let => TokenKind::Let,
+        TokenKind::Equal => TokenKind::Equal,
+        TokenKind::Plus => TokenKind::Plus,
+        TokenKind::Minus => TokenKind::Minus,
+        TokenKind::Newline => TokenKind::Newline,
+        TokenKind::Semicolon => TokenKind::Semicolon,
+        TokenKind::Loop => TokenKind::Loop,
+        TokenKind::End => TokenKind::End,
+        TokenKind::Do => TokenKind::Do,
+        TokenKind::Print => TokenKind::Print,
+        TokenKind::Ident => TokenKind::Ident,
+        TokenKind::Number(x) => TokenKind::Number(*x),
+        TokenKind::EOF => TokenKind::EOF,
+    }
+}
+
 /// mapping of special to their strings
 pub(crate) const fn get_token_keyword(token: &TokenKind) -> BoundTokenKeyword {
     match token {
@@ -99,6 +120,7 @@ pub(crate) const fn get_token_keyword(token: &TokenKind) -> BoundTokenKeyword {
         TokenKind::Print => BoundTokenKeyword::String("print"),
         TokenKind::Ident => BoundTokenKeyword::None,
         TokenKind::Number(_) => BoundTokenKeyword::None,
+        TokenKind::EOF => BoundTokenKeyword::None,
     }
 }
 
