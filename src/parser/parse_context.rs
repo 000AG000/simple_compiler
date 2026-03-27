@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use super::{ParseError, ParseErrorKind};
 /// Parse context used and build up by parser
 /// Context at the moment only contains variable bound to names and no shadowing
-use crate::lexer::{Span, Token};
+use crate::lexer::{Span};
 
 /// Kind of Identificator
 ///
@@ -39,14 +39,14 @@ impl ParseContext {
     pub fn classify(
         &self,
         ident_str: &str,
-        associated_tokens: &Vec<&Token>,
+        associated_span: Span,
     ) -> Result<Ident, ParseError> {
         match self.ident_mapping.get(ident_str).copied() {
             Some(ident) => Ok(ident),
             None => {
                 return Err(ParseError {
                     kind: ParseErrorKind::IdentificatorNotKnown(ident_str.to_string()),
-                    associated_tokens: associated_tokens.iter().map(|t| (*t).clone()).collect(),
+                    span: associated_span,
                 });
             }
         }
@@ -66,17 +66,16 @@ impl ParseContext {
         ident_name: &str,
         ident_kind: IdentKind,
         ident_span: Span,
-        token: Token,
     ) -> Result<Ident, ParseError> {
         let ident_string = ident_name.to_string();
 
         // early return if identificator already defined
         if self.ident_mapping.contains_key(ident_name) {
 
-            let ident = self.classify(ident_name, &Vec::new())?;
+            let ident = self.classify(ident_name, ident_span)?;
             return Err(ParseError {
                 kind: ParseErrorKind::IdentificatorAlreadyUsed(ident_string, ident.span),
-                associated_tokens: vec![token],
+                span: ident.span,
             });
         }
 

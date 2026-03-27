@@ -1,85 +1,190 @@
-use std::{iter::Peekable, slice::Iter};
 
 use super::parser_helper_func::*;
 
 use crate::{
     lexer::{Span, Token, TokenKind},
     parser::{
-        ParseError, ParseErrorKind, Statement,
-        parse_context::{IdentKind, ParseContext},
+        BinOp, Expr, Ident, ParseError, ParseErrorKind, Statement, parse_context::{IdentKind, ParseContext}
     },
 };
 
 use super::Program;
 
-/// Parser for parsing tokens from lexical analysis to simplified AST
-///
-/// Design choises
-/// - parsers uses stack to see in what loop the statements needs to be added
-/// - build up parse context for storing information like variables
+/// Parser for saving information about the current parse state
+struct Parser<'a> {
+    tokens: &'a [Token],
+    pos: usize,
+    input: &'a str,
+    context: ParseContext,
+}
 
-pub fn parse(input_tokens: &Vec<Token>, input_str: &str) -> Result<Program, ParseError> {
-    let mut program = Program::new();
+impl<'a> Parser<'a> {
+    pub fn new(
+        tokens: &'a [Token],
+    input: &'a str,
+    context: ParseContext,) -> Self{
+        Parser { tokens, pos: 0, input, context }
+    }
 
-    let mut parse_stack = vec![(None, Vec::new())];
-    let mut input_iter: Peekable<Iter<'_, Token>> = input_tokens.iter().peekable();
+    pub fn current(&self) -> &Token {
+        &self.tokens[self.pos]
+    }
 
-    let mut parse_context = ParseContext::new();
+    pub fn peek(&self) -> Option<&Token> {
+        self.tokens.get(self.pos)
+    }
 
-    let mut expected_token_kinds;
+    pub fn advance(&mut self) {
+        self.pos += 1;
+    }
 
-    while let Some(token) = input_iter.next() {
-        match (
-            token.span,
-            token.kind,
-            //parse_state_vec.pop().or(Some(ParseState::Idle)).unwrap(),
-        ) {
+    /// Consumes next token and compare it to TokenKind
+    /// Returns NonExpectedToken error when TokenKinds differ
+    /// Used for parsing the next expected token
+    pub fn expect(&mut self, kind: TokenKind) -> Result<Token, ParseError> {
+        let token = self.current().clone();
+        if token.kind == kind {
+            self.advance();
+            Ok(token)
+        }
+        // handle TokenKind with data separatly
+        else if let (TokenKind::Number(_), TokenKind::Number(_)) = (token.kind, kind) {
+            self.advance();
+            Ok(token)
+        } else {
+            Err(ParseError {
+                kind: ParseErrorKind::NonExpectedToken(vec![kind], token.kind),
+                span: token.span,
+            })
+        }
+    }
+
+    /// Consumes any non Operand TokenKind associated with Expressions
+    /// Returns a NonExpectedToken Error when no expected Token is read
+    /// Used for Expression parsing
+    pub fn parse_non_operand_expr(&mut self) -> Result<Expr, ParseError> {
+        let token = self.current();
+
+        let ret = Ok(match token {
+            Token {
+                kind: TokenKind::Ident,
+                ..
+            } => Expr::Ident(
+                self.context
+                    .classify(token.lexeme(&self.input), token.span)?,
+            ),
+            Token {
+                kind: TokenKind::Number(num),
+                ..
+            } => Expr::Number(*num),
+            _ => {
+                return Err(give_non_expected_token_error(
+                    &token.kind,
+                    vec![TokenKind::Ident, TokenKind::Number(0)],
+                    token.span,
+                ));
+            }
+        });
+        self.advance();
+        ret
+    }
+
+    // Consumes tokens gready till final expression is gotten
+    // Used for fast Expression parsing
+    pub fn parse_expr(&mut self) -> Result<Expr, ParseError> {
+        let mut expr = self.parse_non_operand_expr()?;
+
+        while let Some(Token {
+            kind: token_kind, ..
+        }) = self.peek()
+        {
+            let op = match token_kind {
+                TokenKind::Plus => BinOp::Add,
+                TokenKind::Minus => BinOp::Sub,
+                _ => break,
+            };
+            self.advance();
+
+            let right_expr = self.parse_non_operand_expr()?;
+            expr = Expr::Binary {
+                left: Box::new(expr),
+                op,
+                right: Box::new(right_expr),
+            };
+        }
+
+        Ok(expr)
+    }
+
+    /// Consumes next Seimicolon or Newline
+    /// Returns NonExpectedTokenError when reading any other TokenKind
+    pub fn parse_statement_end(&mut self) -> Result<(), ParseError> {
+        let token = self.current();
+
+        match token {
+            Token {
+                kind: TokenKind::Semicolon | TokenKind::Newline,
+                ..
+            } => Ok(()),
+
+            token => {
+                return Err(give_non_expected_token_error(
+                    &token.kind,
+                    vec![TokenKind::Semicolon, TokenKind::Newline],
+                    token.span,
+                ));
+            }
+        }
+    }
+
+    /// Consuming following token as Identificator and looking it up in the Parse Context
+    /// Retruns Error when not a Ident token
+    /// Used for parsing expected Identificator 
+    pub fn parse_ident(&mut self
+    ) -> Result<Ident, ParseError> {
+        let token = self.current();
+
+
+        let ret = match token {
+            Token {
+                kind: TokenKind::Ident,
+                span,
+            } => self.context.classify(token.lexeme(&self.input),*span ),
+
+            _ => {
+                return Err(give_non_expected_token_error(
+                    &token.kind,
+                    vec![TokenKind::Ident],
+                    token.span,
+                ));
+            }
+        };
+
+        self.advance();
+
+        ret
+    }
+
+    /// Desides from the first token what statement it is and parses it
+    /// Returns ParseError when invalid statement is read
+    /// Used for Recursive Descend Parsing Algorithm
+    pub fn parse_statement(&mut self)-> Result<Statement, ParseError>{
+        
+        let start_token = self.current().clone();
+        self.advance(); 
+        Ok(match (start_token.span,start_token.kind)
+        {
             (span, token_kind) => {
-                let mut associated_tokens = vec![token];
                 match token_kind {
-                    TokenKind::Let => {
-                        expected_token_kinds = vec![TokenKind::Ident];
+                    TokenKind::Let => 'let_stm:{
 
                         // test for Ident token
-                        let mut token = read_next_token(
-                            &mut input_iter,
-                            &expected_token_kinds,
-                            &mut associated_tokens,
-                        )?;
+                        let token = self.expect(TokenKind::Ident)?;
 
-                        let ident = match token {
-                            Token {
-                                kind: TokenKind::Ident,
-                                span: ident_span,
-                            } => {
-                                let ident_def_span = Span {
-                                    start: span.start,
-                                    end: ident_span.end,
-                                };
-                                parse_context.new_ident(
-                                    token.lexeme(input_str),
-                                    IdentKind::Variable,
-                                    ident_def_span,
-                                    token.clone(),
-                                )?
-                            }
-                            _ => {
-                                return Err(give_non_expected_token_error(
-                                    &token.kind,
-                                    expected_token_kinds,
-                                    &mut associated_tokens,
-                                ));
-                            }
-                        };
+                        let ident = self.context.new_ident(token.lexeme(self.input), IdentKind::Variable, Span { start: span.start, end: token.span.end })?;
 
-                        expected_token_kinds =
-                            vec![TokenKind::Semicolon, TokenKind::Newline, TokenKind::Equal];
 
-                        token = read_next_token(
-                            &mut input_iter,
-                            &expected_token_kinds,
-                            &mut associated_tokens,
-                        )?;
+                        let token = self.current();
 
                         match token {
                             Token {
@@ -90,12 +195,8 @@ pub fn parse(input_tokens: &Vec<Token>, input_str: &str) -> Result<Program, Pars
                                     name: ident,
                                     value: None,
                                 };
-                                add_statement_with_token_ref(
-                                    &associated_tokens,
-                                    &mut parse_stack,
-                                    new_statement,
-                                )?;
-                                continue; // early return when only declaration
+                                
+                                break 'let_stm new_statement;
                             }
                             Token {
                                 kind: TokenKind::Equal,
@@ -105,35 +206,27 @@ pub fn parse(input_tokens: &Vec<Token>, input_str: &str) -> Result<Program, Pars
                             token => {
                                 return Err(give_non_expected_token_error(
                                     &token.kind,
-                                    expected_token_kinds,
-                                    &mut associated_tokens,
+                                    vec![TokenKind::Semicolon , TokenKind::Newline, TokenKind::Equal],
+                                    token.span,
                                 ));
                             }
                         }
 
-                        let expr = read_in_expr(
-                            &mut input_iter,
-                            input_str,
-                            &mut associated_tokens,
-                            &parse_context,
-                        )?;
+                        let expr = self.parse_expr()?; 
 
-                        read_in_end(&mut input_iter, &mut associated_tokens)?;
+                        self.parse_statement_end()?;
 
-                        let new_statement = Statement::Let {
+                        Statement::Let {
                             name: ident,
                             value: Some(expr),
-                        };
-                        add_statement_with_token_ref(
-                            &associated_tokens,
-                            &mut parse_stack,
-                            new_statement,
-                        )?;
+                        }
+                        
                     }
                     kind @ (TokenKind::Equal
                     | TokenKind::Plus
                     | TokenKind::Minus
                     | TokenKind::Do
+                    | TokenKind::End
                     | TokenKind::Number(_)) => {
                         return Err(give_non_expected_token_error(
                             &kind,
@@ -143,28 +236,22 @@ pub fn parse(input_tokens: &Vec<Token>, input_str: &str) -> Result<Program, Pars
                                 TokenKind::Print,
                                 TokenKind::Ident,
                             ],
-                            &mut associated_tokens,
+                            span,
                         ));
                     }
-                    TokenKind::Newline | TokenKind::Semicolon => {
-                        add_statement_with_token_ref(
-                            &associated_tokens,
-                            &mut parse_stack,
+                    TokenKind::Newline | TokenKind::Semicolon => 
+
                             Statement::Empty,
-                        )?;
-                    }
+                        
+                    
                     TokenKind::Loop => {
                         let mut expected_token_kinds = vec![TokenKind::Ident];
 
-                        let ident = read_in_ident(&mut input_iter, input_str, &mut associated_tokens, &parse_context)?;
+                        let ident = self.parse_ident()?;
 
                         expected_token_kinds = vec![TokenKind::Do];
 
-                        let token = read_next_token(
-                            &mut input_iter,
-                            &expected_token_kinds,
-                            &mut associated_tokens,
-                        )?;
+                        let token = self.current();
 
                         match token {
                             Token {
@@ -175,142 +262,81 @@ pub fn parse(input_tokens: &Vec<Token>, input_str: &str) -> Result<Program, Pars
                                 return Err(give_non_expected_token_error(
                                     &token_kind,
                                     expected_token_kinds,
-                                    &mut associated_tokens,
+                                    span,
                                 ));
                             }
                         };
+                        self.advance();
 
-                        parse_stack.push((
-                            Some((
-                                ident,
-                                associated_tokens.iter().map(|t| (*t).clone()).collect(),
-                            )),
-                            Vec::new(),
-                        ));
-                    }
-                    TokenKind::End => match parse_stack.pop() {
-                        Some((Some((ident, mut associated_loop_tokens)), statements)) => {
-                            associated_loop_tokens.push(token.clone());
-                            let new_statement = Statement::Loop {
-                                var: ident,
-                                body: statements,
-                            };
-                            add_statement(
-                                &associated_loop_tokens,
-                                &mut parse_stack,
-                                new_statement,
-                            )?;
-                        }
-                        _ => {
-                            return Err(ParseError {
-                                kind: ParseErrorKind::UnexpectedEnd(token.span),
-                                associated_tokens: vec![token.clone()],
-                            });
-                        }
+                        let mut loop_statements = Vec::new();
+
+                        loop{
+                            
+                            match self.peek(){
+                                Some(Token { kind: TokenKind::End, .. }) => {self.advance();break},
+                                Some(_) => loop_statements.push(self.parse_statement()?),
+                                None => return Err(
+                                    ParseError { kind: ParseErrorKind::UnexpectedEOF(vec![TokenKind::Let,TokenKind::Loop,TokenKind::End,TokenKind::Ident,TokenKind::Print]), span }
+                                ),
+                            }
+                        };
+                        
+                        Statement::Loop { var: ident, body: loop_statements }
+
                     },
                     TokenKind::Print => {
-                        let ident = read_in_ident(
-                            &mut input_iter,
-                            input_str,
-                            &mut associated_tokens,
-                            &parse_context,
-                        )?;
-                        let new_statement = Statement::Print { name: ident };
-                        add_statement_with_token_ref(
-                            &associated_tokens,
-                            &mut parse_stack,
-                            new_statement,
-                        )?;
+                        let ident = self.parse_ident()?;
+                        self.parse_statement_end()?;
+                        Statement::Print { name: ident }
+                        
                     }
                     TokenKind::Ident => {
-                        let ident =
-                            parse_context.classify(token.lexeme(input_str), &associated_tokens)?;
+                        let ident = self.parse_ident()?;
+                        self.expect(TokenKind::Equal)?;
 
-                        expected_token_kinds = vec![TokenKind::Equal];
 
-                        let token = read_next_token(
-                            &mut input_iter,
-                            &expected_token_kinds,
-                            &mut associated_tokens,
-                        )?;
+                        let expr = self.parse_expr()?;
 
-                        match token {
-                            Token {
-                                kind: TokenKind::Equal,
-                                ..
-                            } => (),
+                        self.parse_statement_end()?;
 
-                            token => {
-                                return Err(give_non_expected_token_error(
-                                    &token.kind,
-                                    expected_token_kinds,
-                                    &mut associated_tokens,
-                                ));
-                            }
-                        }
-
-                        let expr = read_in_expr(
-                            &mut input_iter,
-                            input_str,
-                            &mut associated_tokens,
-                            &parse_context,
-                        )?;
-
-                        read_in_end(&mut input_iter, &mut associated_tokens)?;
-
-                        let new_statement = Statement::Assign {
+                        Statement::Assign {
                             name: ident,
                             value: expr,
-                        };
-                        add_statement_with_token_ref(
-                            &associated_tokens,
-                            &mut parse_stack,
-                            new_statement,
-                        )?;
+                        }
+                        
                     }
                 }
             }
-        }
+        })
+    
     }
 
-    // check remaining stack and append the statement list of it to the program
-    match parse_stack.pop() {
-        Some((None, statements)) => {
-            program.statements = statements;
-        }
-        Some((Some((_, associated_tokens)), _)) => {
-            let begin = associated_tokens
-                .first()
-                .unwrap_or(&Token {
-                    kind: TokenKind::Loop,
-                    span: Span { start: 0, end: 0 },
-                })
-                .span
-                .start;
-            let end = associated_tokens
-                .last()
-                .unwrap_or(&Token {
-                    kind: TokenKind::Loop,
-                    span: Span { start: 0, end: 0 },
-                })
-                .span
-                .end;
 
-            return Err(ParseError {
-                kind: ParseErrorKind::UnclosedLoop(Span {
-                    start: begin,
-                    end: end,
-                }),
-                associated_tokens: associated_tokens,
-            });
+    /// Consumes all tokens of Parser and parse a program out of it
+    /// Returns ParseError when not be able to parse Tokens
+    /// Used for Parsing whole file
+    pub fn parse_program(&mut self) -> Result<Program,ParseError>{
+        let mut statements = Vec::with_capacity(10);
+        
+        while self.peek().is_some() {
+            statements.push(self.parse_statement()?);
         }
-        None => {
-            return Err(ParseError {
-                kind: ParseErrorKind::InternalError("Parse stack corruption".to_string()),
-                associated_tokens: vec![],
-            });
-        }
+
+        Ok(Program{ statements:statements})
     }
+}
 
-    Ok(program)
+/// Parser for parsing tokens from lexical analysis to simplified AST
+///
+/// Design choises
+/// - parsers uses stack to see in what loop the statements needs to be added
+/// - build up parse context for storing information like variables
+
+pub fn parse(input_tokens: &Vec<Token>, input_str: &str) -> Result<Program, ParseError> {
+
+    let parse_context = ParseContext::new();
+
+    let mut parser:Parser = Parser::new(input_tokens,input_str,parse_context);
+
+    Ok(parser.parse_program()?)
 }

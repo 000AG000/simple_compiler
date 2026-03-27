@@ -19,11 +19,9 @@ pub enum ParseErrorKind {
     /// - String for Identification
     IdentificatorNotKnown(String),
     /// Unclosed loop
-    /// - Identification of loop
-    UnclosedLoop(Span),
+    UnclosedLoop,
     /// Unexpected End of loop
-    /// - Span of End token   
-    UnexpectedEnd(Span),
+    UnexpectedEnd,
     InternalError(String),
 }
 
@@ -37,8 +35,6 @@ pub struct ParseError {
 
 impl Display for ParseError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let start = self.span.start;
-        let end= self.span.end;
 
         match &self.kind {
             ParseErrorKind::NonExpectedToken(token_expect, token_gotten) => write!(
@@ -46,7 +42,7 @@ impl Display for ParseError {
                 "Parsing error: Got non expected token {:?}, expected on of these tokens: {:?}",
                 token_gotten, token_expect
             ),
-            ParseErrorKind::IdentificatorAlreadyUsed(ident_name, span) => write!(
+            ParseErrorKind::IdentificatorAlreadyUsed(ident_name, _) => write!(
                 f,
                 "Parsing error: Identificator \"{}\" already in use.",
                 ident_name
@@ -66,11 +62,11 @@ impl Display for ParseError {
                 "Parsing error: Identificator not defined: {}",
                 ident_str,
             ),
-            ParseErrorKind::UnclosedLoop(span) => write!(
+            ParseErrorKind::UnclosedLoop => write!(
                 f,
                 "Parsing error: Unclosed loop",
             ),
-            ParseErrorKind::UnexpectedEnd(span) => write!(
+            ParseErrorKind::UnexpectedEnd => write!(
                 f,
                 "Parsing error: Unexpeted loop end",
             ),
