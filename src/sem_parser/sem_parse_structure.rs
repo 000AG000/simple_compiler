@@ -4,17 +4,11 @@ use crate::lexer::Span;
 
 use super::sem_parse_context::Ident;
 
-#[derive(Debug,Clone,PartialEq)]
+#[derive(Debug,Clone,PartialEq,Default)]
 /// sturct for a whole program
 /// at the moment only consists of Statements
 pub struct Program {
     pub statements: Vec<Statement>,
-}
-
-impl Program{
-    pub fn new()->Self{
-        Program { statements: Vec::new() }
-    }
 }
 
 #[derive(Debug,Clone,PartialEq)]
