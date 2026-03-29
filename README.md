@@ -1,6 +1,6 @@
 # Purpose 
 
-This is a test project to learn using vi, get better in rust and thinking about interperters and compilers.
+This is a test project to learn using vim, get better in rust and thinking about interperters and compilers.
 
 ## Language definition
 
@@ -25,12 +25,27 @@ TERM ->
 
 SEPERATOR -> ("\n" | ";")
 
+## How to use
+```bash
+simple_interpreter -p path_to_file
+```
 
+## Project structure
 
-## Lexer ideas
+The projects consists of four parts:
+- main cli tool for basic usage
+- lexer
+- paser
+- interpreter
 
-When interpeters need to interpret a huge amounts of code it would be unwise to have a lexer that is build inefficient and stores all the text as strings. However, in the first approach it would be good to keep it simple.
+### Lexer
 
-## Parser 
+Simple Lexer that only accepting ASCII as input.
 
-The Parser includes also the little sementic analysis needed
+### Parser 
+
+Recursion based parser. The Parser includes also the little sementic analysis needed for this easy language definition.
+
+### Interpreter
+
+It became a runtime execution working with a stack of execution frames.
