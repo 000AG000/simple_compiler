@@ -19,7 +19,7 @@ use super::token::{Token,TokenKind,Span,get_keyword_map};
 /// ```
 ///
 pub fn lex_ascii(lex_input: &str) -> Result<Vec<Token>, LexError> {
-    let mut lexed_tokens: Vec<Token> = Vec::with_capacity(1000);
+    let mut lexed_tokens: Vec<Token> = Vec::new();
     let lex_table = LexTable::new();
     let keyword_map = get_keyword_map();
 

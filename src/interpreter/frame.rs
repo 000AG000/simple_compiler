@@ -3,7 +3,7 @@ use crate::sem_parser::Statement;
 
 #[derive(Debug,Clone,PartialEq)]
 /// All Types of Execution Frames that can occur in the program
-/// Used as identifier in Framekind
+/// Used as identifier in frame kind
 pub enum FrameKind {
     Block,
     Loop { remaining: usize },
