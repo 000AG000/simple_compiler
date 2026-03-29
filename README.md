@@ -31,13 +31,6 @@ SEPERATOR -> ("\n" | ";")
 
 When interpeters need to interpret a huge amounts of code it would be unwise to have a lexer that is build inefficient and stores all the text as strings. However, in the first approach it would be good to keep it simple.
 
-## Parser ideas
+## Parser 
 
-Make the language simple so you only need a minimal number of peeks forward
-
-## Semantic analisys
-So simple it is hidden in the Parser
-
-## Interpeter ideas
-
-- build 
+The Parser includes also the little sementic analysis needed
