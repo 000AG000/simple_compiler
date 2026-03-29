@@ -1,4 +1,4 @@
-/// Tests for Lexer
+//! Tests for Lexer
 
 #[cfg(test)]
 mod tests {
@@ -34,7 +34,7 @@ mod tests {
             statements: vec![
                 Statement::new(
                     StatementKind::Let {
-                        name: ident_x.clone(),
+                        name: ident_x,
                         value: Some(Expr::new(ExprKind::Number(0), Span { start: 8, end: 9 })),
                     },
                     Span { start: 0, end: 10 },
@@ -42,11 +42,11 @@ mod tests {
                 Statement::new(StatementKind::Empty, Span { start: 10, end: 11 }),
                 Statement::new(
                     StatementKind::Assign {
-                        name: ident_x.clone(),
+                        name: ident_x,
                         value: Expr::new(
                             ExprKind::Binary {
                                 left: Box::new(Expr::new(
-                                    ExprKind::Ident(ident_x.clone()),
+                                    ExprKind::Ident(ident_x),
                                     Span { start: 15, end: 16 },
                                 )),
                                 op: BinOp::new(BinOpKind::Add, Span { start: 17, end: 18 }),
@@ -63,7 +63,7 @@ mod tests {
                 Statement::new(StatementKind::Empty, Span { start: 21, end: 22 }),
                 Statement::new(
                     StatementKind::Print {
-                        name: ident_x.clone(),
+                        name: ident_x,
                     },
                     Span { start: 22, end: 30 },
                 ),

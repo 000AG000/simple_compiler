@@ -130,7 +130,7 @@ pub fn get_keyword_map() -> HashMap<&'static str, TokenKind> {
 
     KEYWORD_TOKEN.iter().for_each(|x| {
         if let BoundTokenKeyword::String(token_str) = get_token_keyword(x) {
-            keyword_map.insert(token_str, x.clone());
+            keyword_map.insert(token_str, *x);
         }
     });
 

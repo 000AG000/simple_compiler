@@ -1,6 +1,6 @@
-use crate::lexer::Span;
+//! defining the grammatical structure for the parsing process
 
-/// defining the grammatical structure for the parsing process
+use crate::lexer::Span;
 
 use super::sem_parse_context::Ident;
 
@@ -13,7 +13,7 @@ pub struct Program {
 
 impl Program{
     pub fn new()->Self{
-        return Program { statements: Vec::new() }
+        Program { statements: Vec::new() }
     }
 }
 

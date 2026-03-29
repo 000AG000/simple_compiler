@@ -14,7 +14,7 @@ pub fn give_non_expected_token_error(
     associated_span: Span,
 ) -> ParseError {
     ParseError {
-        kind: ParseErrorKind::NonExpectedToken(expected_token_kinds, got_token_kind.clone()),
+        kind: ParseErrorKind::NonExpectedToken(expected_token_kinds, *got_token_kind),
         span: associated_span,
     }
 }

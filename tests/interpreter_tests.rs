@@ -1,4 +1,4 @@
-/// Tests for Lexer
+//! Tests for Lexer
 
 #[cfg(test)]
 mod tests {

@@ -269,5 +269,5 @@ pub fn lex(lex_input: &str) -> Result<Vec<Token>, LexError> {
 
     // add end of file token
     lexed_tokens.push(Token { kind: TokenKind::EOF, span: Span { start: lex_input.len() , end:  lex_input.len()}});
-    return Ok(lexed_tokens);
+    Ok(lexed_tokens)
 }

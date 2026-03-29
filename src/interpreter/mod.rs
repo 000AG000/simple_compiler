@@ -1,5 +1,5 @@
 mod frame;
-mod interpreter;
+mod interpret;
 mod runtime_err;
 
-pub use interpreter::exec;
+pub use interpret::exec;

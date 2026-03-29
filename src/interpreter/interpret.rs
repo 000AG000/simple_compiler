@@ -64,21 +64,18 @@ impl<'a> Interpreter<'a> {
                 self.stack.pop();
 
                 // was last frame
-                if self.stack.len() == 0{
+                if self.stack.is_empty(){
                     return Ok(false)
                 }
 
-                match self.fetch_next_statement_idx() {
-                    Some(frame) => break frame,
-                    None => (),
-                }
+                if let Some(frame) = self.fetch_next_statement_idx() { break frame }
             },
         };
         let current_frame = match self.stack.last_mut() {
             Some(frame) => frame,
             None => return Ok(false),
         };
-        debug_assert!(current_frame.statements.len() >= statement_index,"interpreters statement index out of bounds");
+        debug_assert!(current_frame.statements.len() >= statement_index,"interpreters statement index out of");
         let statement = &current_frame.statements[statement_index];
 
         self.interpret_statement(statement)?;
@@ -94,17 +91,13 @@ impl<'a> Interpreter<'a> {
                 self.context.get_variable(&ident.ident_number)
             }
             crate::sem_parser::ExprKind::Binary { left, op, right } => {
-                let left_expr_eval = self.interpret_expr(&left);
-                let right_expr_eval = self.interpret_expr(&right);
+                let left_expr_eval = self.interpret_expr(left);
+                let right_expr_eval = self.interpret_expr(right);
 
                 match op.node {
                     crate::sem_parser::BinOpKind::Add => left_expr_eval + right_expr_eval,
                     crate::sem_parser::BinOpKind::Sub => {
-                        if left_expr_eval >= right_expr_eval {
-                            left_expr_eval - right_expr_eval
-                        } else {
-                            0
-                        }
+                        left_expr_eval.saturating_sub(right_expr_eval)
                     }
                 }
             }
@@ -115,10 +108,7 @@ impl<'a> Interpreter<'a> {
     /// statement index is used for borrowing reasons
     /// returning None, when current frame is at the end of execution
     pub fn fetch_next_statement_idx(&mut self) -> Option<usize>{
-        let current_frame = match self.stack.last_mut() {
-            Some(frame) => frame,
-            None => return None,
-        };
+        let current_frame = self.stack.last_mut()?;
         let mut current_ip = current_frame.ip;
         if current_ip >= current_frame.statements.len(){
             match &mut current_frame.kind{
@@ -199,7 +189,7 @@ pub fn exec(program: Program, input_str: &str) -> Result<(), RuntimeError> {
         context: RuntimeContext::new(),
         stack: vec![init_frame],
     };
-    while let true = match interpreter.step() {
+    while match interpreter.step() {
         Ok(is_done) => is_done,
         Err(runtime_err) => {
             println!("\n---ERROR OCCURED---\n{}", runtime_err.generate_error_msg(input_str));

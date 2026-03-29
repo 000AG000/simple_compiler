@@ -40,7 +40,7 @@ impl<'a> Parser<'a> {
             return 0;
         }; // early return if first token
 
-        return self.tokens[self.pos - 1].span.end;
+        self.tokens[self.pos - 1].span.end
     }
 
     /// Get Current token and advance to the next token
@@ -92,7 +92,7 @@ impl<'a> Parser<'a> {
                 ..
             } => Expr::new(ExprKind::Ident(
                 self.context
-                    .classify(token.lexeme(&self.input), token.span)?,
+                    .classify(token.lexeme(self.input), token.span)?,
             ),token.span),
             Token {
                 kind: TokenKind::Number(num),
@@ -151,11 +151,11 @@ impl<'a> Parser<'a> {
             } => Ok(()),
 
             token => {
-                return Err(give_non_expected_token_error(
+                Err(give_non_expected_token_error(
                     &token.kind,
                     vec![TokenKind::Semicolon, TokenKind::Newline],
                     token.span,
-                ));
+                ))
             }
         }
     }
@@ -170,7 +170,7 @@ impl<'a> Parser<'a> {
             Token {
                 kind: TokenKind::Ident,
                 span,
-            } => self.context.classify(token.lexeme(&self.input), *span),
+            } => self.context.classify(token.lexeme(self.input), *span),
 
             _ => {
                 return Err(give_non_expected_token_error(
@@ -191,8 +191,9 @@ impl<'a> Parser<'a> {
     /// Used for Recursive Descend Parsing Algorithm
     pub fn parse_statement(&mut self) -> Result<Statement, ParseError> {
         let start_token = self.current();
-        Ok(match (start_token.span, start_token.kind) {
-            (span, token_kind) => match token_kind {
+        Ok({
+            let (span, token_kind) = (start_token.span, start_token.kind);
+            match token_kind {
                 TokenKind::Let => self.parse_let(start_token.span)?,
                 kind @ (TokenKind::Equal
                 | TokenKind::Plus
@@ -253,7 +254,7 @@ impl<'a> Parser<'a> {
                         value: expr,
                     },statement_span)
                 }
-            },
+            }
         })
     }
 
@@ -268,7 +269,7 @@ impl<'a> Parser<'a> {
         }
 
         Ok(Program {
-            statements: statements,
+            statements,
         })
     }
 
@@ -404,11 +405,10 @@ impl<'a> Parser<'a> {
 /// let input_tokens = lex(input_str).unwrap();
 /// parse(&input_tokens,input_str).unwrap();
 /// ```
-
 pub fn parse(input_tokens: &[Token], input_str: &str) -> Result<Program, ParseError> {
     let parse_context = ParseContext::new();
 
     let mut parser: Parser = Parser::new(input_tokens, input_str, parse_context);
 
-    Ok(parser.parse_program()?)
+    parser.parse_program()
 }

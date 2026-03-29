@@ -45,10 +45,10 @@ impl ParseContext {
         match self.ident_mapping.get(ident_str).copied() {
             Some(ident) => Ok(ident),
             None => {
-                return Err(ParseError {
+                Err(ParseError {
                     kind: ParseErrorKind::IdentificatorNotKnown(ident_str.to_string()),
                     span: associated_span,
-                });
+                })
             }
         }
     }
@@ -87,7 +87,7 @@ impl ParseContext {
             span: ident_span,
         };
         self.ident_mapping
-            .insert(ident_name.to_string(), ident.clone());
+            .insert(ident_name.to_string(), ident);
 
         Ok(ident)
     }

@@ -1,7 +1,7 @@
-/// lex_table.rs
-/// Defines LexTable struct for O(1) checking to possible TokenKind mapping
-/// - classify method for getting assotiated type
-/// 
+//! lex_table.rs
+//! Defines LexTable struct for O(1) checking to possible TokenKind mapping
+//! - classify method for getting assotiated type
+//! 
 
 
 use crate::lexer::token::{TokenKind,CONSTANT_TOKENS,BoundTokenKeyword,get_token_keyword,get_token_kind_clone};
@@ -37,8 +37,8 @@ impl LexTable {
                 None => (),
                 Some(char) => match (
                     char,
-                    char_mask[i as usize].clone(),
-                    space_mask[i as usize].clone(),
+                    char_mask[i as usize],
+                    space_mask[i as usize],
                 ) {
                     ('a'..='z', ..) => entries[i as usize] = LexTableEntry::Alphabetic,
                     ('A'..='Z', ..) => entries[i as usize] = LexTableEntry::Alphabetic,
@@ -64,11 +64,8 @@ impl LexTable {
         // no for loop allowed because of const
 
         while i < CONSTANT_TOKENS.len() {
-            match get_token_keyword(&CONSTANT_TOKENS[i]) {
-                BoundTokenKeyword::Char(c) => {
-                    lex_table[c as usize] = Some(get_token_kind_clone(&CONSTANT_TOKENS[i]));
-                }
-                _ => {}
+            if let BoundTokenKeyword::Char(c) = get_token_keyword(&CONSTANT_TOKENS[i]) {
+                lex_table[c as usize] = Some(get_token_kind_clone(&CONSTANT_TOKENS[i]));
             }
             i += 1;
         }
@@ -84,11 +81,8 @@ impl LexTable {
         // no for loop allowed because of const
 
         while i < CONSTANT_TOKENS.len() {
-            match get_token_keyword(&CONSTANT_TOKENS[i]) {
-                BoundTokenKeyword::CharWithNeededSpace(c) => {
-                    lex_table[c as usize] = Some(get_token_kind_clone(&CONSTANT_TOKENS[i]));
-                }
-                _ => {}
+            if let BoundTokenKeyword::CharWithNeededSpace(c) = get_token_keyword(&CONSTANT_TOKENS[i]) {
+                lex_table[c as usize] = Some(get_token_kind_clone(&CONSTANT_TOKENS[i]));
             }
             i += 1;
         }

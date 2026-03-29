@@ -40,11 +40,7 @@ impl ParseError {
     /// Generate error message enriched with input information
     /// Used to better locate message and use ParseError span information
     pub fn generate_error_msg(&self, input: &str) -> String {
-        let str_before = &input[if self.span.start > LOOKAHEAD {
-            self.span.start - LOOKAHEAD
-        } else {
-            0
-        }..self.span.start];
+        let str_before = &input[self.span.start.saturating_sub(LOOKAHEAD)..self.span.start];
         let str_content = &input[self.span.start..self.span.end];
         let str_after = &input[self.span.end..if self.span.end + LOOKAFTER < input.len() {
             self.span.end + LOOKAFTER
