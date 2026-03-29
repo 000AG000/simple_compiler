@@ -2,25 +2,25 @@
 
 #[cfg(test)]
 mod tests {
-    use simple_interpreter::lexer::{Span, Token, TokenKind, lex};
+    use simple_interpreter::lexer::{Span, Token, TokenKind, lex_ascii};
 
     #[test]
     fn test_invalid_char() {
         let input = "let x = 5$;";
-        assert!(lex(input).is_err());
+        assert!(lex_ascii(input).is_err());
     }
 
     #[test]
     fn test_number_ident_mix() {
         let input = "abc123";
-        let tokens = lex(input).unwrap();
+        let tokens = lex_ascii(input).unwrap();
         assert_eq!(tokens[0],Token{kind:TokenKind::Ident,span:Span { start: 0, end: 6 }})
     }
 
     #[test]
     fn test_empty() {
         let input = "";
-        let tokens = lex(input).unwrap();
+        let tokens = lex_ascii(input).unwrap();
         let eof_tokens = vec![Token{kind:TokenKind::EOF,span:Span{start:0,end:0}}];
         assert_eq!(tokens, eof_tokens);
     }
@@ -28,7 +28,7 @@ mod tests {
     #[test]
     fn test_simple() {
         let input = "let x = 5;";
-        let tokens = lex(input).unwrap();
+        let tokens = lex_ascii(input).unwrap();
 
         assert_eq!(tokens.len(), 6);
     }
@@ -37,7 +37,7 @@ mod tests {
     fn test_lexanization_simple_test_file() {
         let filepath = "tests/example_files/simple_test.ms";
         let input_str = std::fs::read_to_string(filepath).unwrap();
-        let lex_vec = lex(&input_str).unwrap();
+        let lex_vec = lex_ascii(&input_str).unwrap();
 
         let simple_test_file_vec = vec![
             Token {

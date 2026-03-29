@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 /// Provide a command line tool for interpret the in the README defined language definition
 use clap::Parser;
-use simple_interpreter::{exec, lex, parse};
+use simple_interpreter::{exec, lex_ascii, parse};
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 /// simple_interpreter is an interpreter for a minimal turing complete language.
@@ -27,7 +27,7 @@ fn main() {
     };
 
     // Lexical Analysis
-    let token_vector = match lex(&input_str) {
+    let token_vector = match lex_ascii(&input_str) {
         Ok(tokens) => tokens,
         Err(err) => {println!("Lexical Error\n{}",err.generate_error_msg(&input_str));return},
     };

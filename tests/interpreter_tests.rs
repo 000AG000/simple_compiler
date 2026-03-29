@@ -4,7 +4,7 @@
 mod tests {
 
     use simple_interpreter::{
-        interpreter::exec, lexer::{lex}, sem_parser::{
+        interpreter::exec, lexer::{lex_ascii}, sem_parser::{
             parse,
         }
     };
@@ -13,7 +13,7 @@ mod tests {
     fn test_exec_simple_test_file() {
         let filepath = "tests/example_files/simple_test.ms";
         let input_str = std::fs::read_to_string(filepath).unwrap();
-        let lex_vec = lex(&input_str).unwrap();
+        let lex_vec = lex_ascii(&input_str).unwrap();
 
         let program = match parse(&lex_vec, &input_str) {
             Ok(program) => program,
@@ -30,7 +30,7 @@ mod tests {
     fn test_exec_loop_test_file() {
         let filepath = "tests/example_files/loop_test.ms";
         let input_str = std::fs::read_to_string(filepath).unwrap();
-        let lex_vec = lex(&input_str).unwrap();
+        let lex_vec = lex_ascii(&input_str).unwrap();
 
         let program = match parse(&lex_vec, &input_str) {
             Ok(program) => program,

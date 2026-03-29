@@ -7,4 +7,4 @@ mod lex;
 
 pub use token::{Token,Span,TokenKind};
 pub use lex_error::{LexError,LexErrorKind};
-pub use lex::lex;
+pub use lex::lex_ascii;
