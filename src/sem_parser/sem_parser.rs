@@ -28,7 +28,7 @@ impl<'a> Parser<'a> {
     }
 
     pub fn current(&self) -> &Token {
-        debug_assert!(self.pos < self.tokens.len());
+        debug_assert!(self.pos <= self.tokens.len(),"Parser position out of bounds");
         &self.tokens[self.pos]
     }
 

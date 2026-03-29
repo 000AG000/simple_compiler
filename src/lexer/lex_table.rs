@@ -6,7 +6,6 @@
 
 use crate::lexer::token::{TokenKind,CONSTANT_TOKENS,BoundTokenKeyword,get_token_keyword,get_token_kind_clone};
 
-
 #[derive(Debug, Clone, PartialEq)]
 pub enum LexTableEntry {
     Split,
