@@ -39,7 +39,7 @@ impl RuntimeContext {
     }
 
     // getting the current context of
-    pub fn get_variable(&mut self, ident_id: &IdentId) -> usize {
+    pub fn get_variable(&self, ident_id: &IdentId) -> usize {
         self.variables[ident_id]
     }
 }
@@ -47,35 +47,40 @@ impl RuntimeContext {
 #[derive(Debug, Clone, PartialEq)]
 /// Iterpeter for handling context and execute steps
 /// Used for stepwise execute statements
-struct Interpreter {
+struct Interpreter<'a> {
     context: RuntimeContext,
-    stack: Vec<Frame>,
-    current_frame: Frame,
+    stack: Vec<Frame<'a>>,
 }
 
 type DidExecute = bool;
 
-impl Interpreter {
+impl<'a> Interpreter<'a> {
     /// execute next statement
     /// when reaching the end it returns false
     pub fn step(&mut self) -> Result<DidExecute, RuntimeError> {
-        let statement2execute = match self.next_frame_statement() {
+        let statement_index = match self.next_frame_statement_idx() {
             Some(statement) => statement,
             None => loop {
-                self.current_frame = match self.stack.pop() {
+                // check for next frame
+                match self.stack.pop() {
                     Some(frame) => frame,
                     None => return Ok(false),
                 };
 
-                match self.next_frame_statement() {
+                match self.next_frame_statement_idx() {
                     Some(frame) => break frame,
                     None => (),
                 }
             },
-        }
-        .clone();
+        };
+        let current_frame = match self.stack.last_mut() {
+            Some(frame) => frame,
+            None => return Ok(false),
+        };
+        debug_assert!(current_frame.statements.len() >= statement_index);
+        let statement = &current_frame.statements[statement_index];
 
-        self.interpet_statement(&statement2execute)?;
+        self.interpet_statement(statement)?;
 
         Ok(true)
     }
@@ -105,12 +110,17 @@ impl Interpreter {
         }
     }
 
-    /// get statement of the frame
+    /// get statement index of the frame
+    /// statement index is used for borrowing reasons
     /// returning None, when current frame is at the end of execution
-    pub fn next_frame_statement(&mut self) -> Option<&Statement>{
-        let mut current_ip = self.current_frame.ip;
-        if current_ip >= self.current_frame.statements.len(){
-            match &mut self.current_frame.kind{
+    pub fn next_frame_statement_idx(&mut self) -> Option<usize>{
+        let current_frame = match self.stack.last_mut() {
+            Some(frame) => frame,
+            None => return None,
+        };
+        let mut current_ip = current_frame.ip;
+        if current_ip >= current_frame.statements.len(){
+            match &mut current_frame.kind{
                 FrameKind::Loop { remaining } => {
                     if *remaining == 0{
                         return None
@@ -122,12 +132,12 @@ impl Interpreter {
             }
 
         }
-        self.current_frame.ip = current_ip + 1;
-        Some(&self.current_frame.statements[current_ip])
+        current_frame.ip = current_ip + 1;
+        Some(current_ip)
     }
 
     /// interpret statement in current context
-    pub fn interpet_statement(&mut self, statement: &Statement) -> Result<(), RuntimeError> {
+    pub fn interpet_statement(&mut self, statement: &'a Statement) -> Result<(), RuntimeError> {
         match &statement.node {
             crate::sem_parser::StatementKind::Let { name, value } => {
                 if self.context.contains_variable(&name.ident_number) {
@@ -152,9 +162,9 @@ impl Interpreter {
                 let num = self.context.get_variable(&var.ident_number);
                 if num != 0 {
                     let loop_frame =
-                        Frame::new(FrameKind::Loop { remaining: num - 1 }, body.to_vec());
-                    self.stack.push(self.current_frame.clone());
-                    self.current_frame = loop_frame;
+                        Frame::new(FrameKind::Loop { remaining: num - 1 }, body);
+                    self.stack.push(loop_frame);
+                    
                 }
             }
             crate::sem_parser::StatementKind::Print { name: ident } => {
@@ -183,11 +193,10 @@ impl Interpreter {
 /// exec(program,input_str);
 /// ```
 pub fn exec(program: Program, input_str: &str) -> Result<(), RuntimeError> {
-    let init_frame = Frame::new(FrameKind::Block, program.statements);
+    let init_frame = Frame::new(FrameKind::Block, &program.statements);
     let mut interpreter = Interpreter {
         context: RuntimeContext::new(),
-        stack: Vec::new(),
-        current_frame: init_frame,
+        stack: vec![init_frame],
     };
     while let true = match interpreter.step() {
         Ok(is_done) => is_done,

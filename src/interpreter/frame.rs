@@ -11,19 +11,19 @@ pub enum FrameKind {
 
 #[derive(Debug,Clone,PartialEq)]
 /// Execution Frame for storing the relevant Frame data
-pub struct Frame {
+pub struct Frame<'a> {
     /// saving the current frame context e.g. for loops 
     pub kind: FrameKind,
     /// statements defined in the frame
-    pub statements: Vec<Statement>,
+    pub statements: & 'a[Statement],
     /// instruction pointer pointing to next statement
     pub ip: usize,
 }
 
 
-impl Frame{
+impl<'a> Frame<'a>{
     /// crate a new frame with instruction pointer to 0
-    pub fn new(kind:FrameKind,statements:Vec<Statement>) -> Self{
+    pub fn new(kind:FrameKind,statements:&'a [Statement]) -> Self{
         Self { kind, statements, ip: 0 }
     }
 
