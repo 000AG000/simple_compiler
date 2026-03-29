@@ -13,9 +13,9 @@ use super::token::{Token,TokenKind,Span,get_keyword_map};
 ///
 /// example usage:
 /// ```
-/// use simple_interpreter::lexer::lex;
+/// use simple_interpreter::lexer::lex_ascii;
 /// let lex_input = "let x = 0;";
-/// let token_vec = lex(lex_input).unwrap();
+/// let token_vec = lex_ascii(lex_input).unwrap();
 /// ```
 ///
 pub fn lex_ascii(lex_input: &str) -> Result<Vec<Token>, LexError> {

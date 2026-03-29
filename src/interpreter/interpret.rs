@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-
+use log::debug;
 use crate::{
     interpreter::{
         frame::{Frame, FrameKind},
@@ -129,6 +129,7 @@ impl<'a> Interpreter<'a> {
 
     /// interpret statement in current context
     pub fn interpret_statement(&mut self, statement: &'a Statement) -> Result<(), RuntimeError> {
+        debug!("Executing statement: {:?}",statement);
         match &statement.node {
             crate::sem_parser::StatementKind::Let { name, value } => {
                 if self.context.contains_variable(&name.ident_number) {
@@ -175,11 +176,11 @@ impl<'a> Interpreter<'a> {
 /// 
 /// example usage:
 /// ```
-/// use simple_interpreter::lexer::lex;
+/// use simple_interpreter::lexer::lex_ascii;
 /// use simple_interpreter::sem_parser::parse;
 /// use simple_interpreter::interpreter::exec;
 /// let input_str = "let x = 0;print x;";
-/// let input_tokens = lex(input_str).unwrap();
+/// let input_tokens = lex_ascii(input_str).unwrap();
 /// let program = parse(&input_tokens,input_str).unwrap();
 /// exec(program,input_str);
 /// ```

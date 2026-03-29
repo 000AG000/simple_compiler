@@ -399,10 +399,10 @@ impl<'a> Parser<'a> {
 /// 
 /// example usage:
 /// ```
-/// use simple_interpreter::lexer::lex;
+/// use simple_interpreter::lexer::lex_ascii;
 /// use simple_interpreter::sem_parser::parse;
 /// let input_str = "let x = 0;";
-/// let input_tokens = lex(input_str).unwrap();
+/// let input_tokens = lex_ascii(input_str).unwrap();
 /// parse(&input_tokens,input_str).unwrap();
 /// ```
 pub fn parse(input_tokens: &[Token], input_str: &str) -> Result<Program, ParseError> {

@@ -15,6 +15,9 @@ struct Args {
 }
 
 fn main() {
+    // enable logging
+    env_logger::init();
+
     let args = Args::parse();
 
     // Reading in file
