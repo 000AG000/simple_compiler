@@ -5,7 +5,7 @@ use crate::lexer::Span;
 use super::sem_parse_context::Ident;
 
 #[derive(Debug,Clone,PartialEq,Default)]
-/// sturct for a whole program
+/// struct for a whole program
 /// at the moment only consists of Statements
 pub struct Program {
     pub statements: Vec<Statement>,
@@ -30,7 +30,7 @@ pub type Expr = Spanned<ExprKind>;
 pub type BinOp = Spanned<BinOpKind>;
 
 #[derive(Debug,Clone,PartialEq)]
-/// Statement types that can be used in this grammer
+/// Statement types that can be used in this grammar
 pub enum StatementKind {
     Let {
         name: Ident,
@@ -50,7 +50,7 @@ pub enum StatementKind {
     Empty
 }
 #[derive(Debug,Clone,PartialEq)]
-/// Expression of this grammer
+/// Expression of this grammar
 pub enum ExprKind {
     Number(usize),
     Ident(Ident),

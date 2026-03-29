@@ -34,7 +34,7 @@ mod tests {
     }
 
     #[test]
-    fn test_lexanization_simple_test_file() {
+    fn test_tokenization_simple_test_file() {
         let filepath = "tests/example_files/simple_test.ms";
         let input_str = std::fs::read_to_string(filepath).unwrap();
         let lex_vec = lex_ascii(&input_str).unwrap();

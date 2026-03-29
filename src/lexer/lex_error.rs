@@ -4,13 +4,13 @@ use std::{ error::Error, fmt, fmt::Display};
 use super::Span;
 
 /// number of characters to visualize ahead when showing an error
-const LOOKAHEAD:usize = 20;
+const LOOK_AHEAD:usize = 20;
 /// number of characters to visualize afterwards when showing an error
-const LOOKAFTER:usize = 20;
+const LOOK_AFTER:usize = 20;
 
 
 #[derive(Debug, Clone)]
-/// Errors that can occur during the lexanizer process
+/// Errors that can occur during the tokenization process
 pub enum LexErrorKind {
     UnknownCharacter(char),
     UnexpectedCharacter(char),
@@ -29,10 +29,10 @@ impl LexError{
     /// Generate error message enriched with input information
     /// Used to better locate message and use ParseError span information
     pub fn generate_error_msg(&self, input: &str) -> String {
-        let str_before = &input[self.span.start.saturating_sub(LOOKAHEAD)..self.span.start];
+        let str_before = &input[self.span.start.saturating_sub(LOOK_AHEAD)..self.span.start];
         let str_content = &input[self.span.start..self.span.end];
-        let str_after = &input[self.span.end..if self.span.end + LOOKAFTER < input.len() {
-            self.span.end + LOOKAFTER
+        let str_after = &input[self.span.end..if self.span.end + LOOK_AFTER < input.len() {
+            self.span.end + LOOK_AFTER
         } else {
             input.len()
         }];

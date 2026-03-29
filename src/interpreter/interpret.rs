@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::{
     interpreter::{
         frame::{Frame, FrameKind},
-        runtime_err::{RuntimeError, RuntimeErrorkind},
+        runtime_err::{RuntimeError, RuntimeErrorKind},
     },
     sem_parser::{Expr, IdentId, Program, Statement},
 };
@@ -28,7 +28,7 @@ impl RuntimeContext {
         self.variables.insert(*ident_id, 0);
     }
 
-    // setting a variabe in the current context
+    // setting a variable in the current context
     pub fn set_variable(&mut self, ident_id: &IdentId, content: usize) {
         self.variables.insert(*ident_id, content);
     }
@@ -46,7 +46,7 @@ impl RuntimeContext {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-/// Iterpeter for handling context and execute steps
+/// Interpreter for handling context and execute steps
 /// Used for stepwise execute statements
 struct Interpreter<'a> {
     context: RuntimeContext,
@@ -133,7 +133,7 @@ impl<'a> Interpreter<'a> {
             crate::sem_parser::StatementKind::Let { name, value } => {
                 if self.context.contains_variable(&name.ident_number) {
                     return Err(RuntimeError {
-                        kind: RuntimeErrorkind::VariableAlreadyDefined,
+                        kind: RuntimeErrorKind::VariableAlreadyDefined,
                         span: statement.span,
                     });
                 }
@@ -169,7 +169,7 @@ impl<'a> Interpreter<'a> {
 
 /// execute parsed program till end
 /// 
-/// Desing choises:
+/// Design choices:
 /// - used frame based ExecutionContext
 /// - introduced Interpreter struct to handle stack frame and execution context
 /// 
@@ -192,7 +192,7 @@ pub fn exec(program: Program, input_str: &str) -> Result<(), RuntimeError> {
     while match interpreter.step() {
         Ok(is_done) => is_done,
         Err(runtime_err) => {
-            println!("\n---ERROR OCCURED---\n{}", runtime_err.generate_error_msg(input_str));
+            println!("\n---ERROR OCCURRED---\n{}", runtime_err.generate_error_msg(input_str));
             return Err(runtime_err);
         }
     } {}

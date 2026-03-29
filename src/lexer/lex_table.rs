@@ -1,6 +1,6 @@
 //! lex_table.rs
 //! Defines LexTable struct for O(1) checking to possible TokenKind mapping
-//! - classify method for getting assotiated type
+//! - classify method for getting associated type
 //! 
 
 
@@ -56,7 +56,7 @@ impl LexTable {
         LexTable { entries }
     }
 
-    /// get LexTableEmtries for char type TokenKinds
+    /// get LexTableEntries for char type TokenKinds
     const fn get_char_mask() -> [Option<TokenKind>; u8::MAX as usize] {
         let mut lex_table = [const { None }; u8::MAX as usize];
         let mut i = 0;
@@ -73,7 +73,7 @@ impl LexTable {
         lex_table
     }
 
-    /// get LexTableEmtries for char type TokenKinds that need spaceing afterwards
+    /// get LexTableEntries for char type TokenKinds that need spacing afterwards
     const fn get_char_needing_space_mask() -> [Option<TokenKind>; u8::MAX as usize] {
         let mut lex_table = [const { None }; u8::MAX as usize];
         let mut i = 0;

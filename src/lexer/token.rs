@@ -1,11 +1,11 @@
 /// token.rs
 /// Token used by lexical analysis
-/// - consists of Tokenkind and Span
-/// - Span defines start and endposition of token
+/// - consists of token kind and Span
+/// - Span defines start and end position of token
 ///
 /// Defines also Token(kind)classes like:
 /// - CONSTANT_TOKENS: tokens that have a constant length
-/// - KEYWORD_TOKEN: token assotiated with a string keyword
+/// - KEYWORD_TOKEN: token associated with a string keyword
 ///
 /// Defines a mapping between TokenKind and associated String or
 /// Char via SpecialToken
@@ -77,7 +77,7 @@ pub const KEYWORD_TOKEN: [TokenKind; 5] = [
 ];
 
 #[derive(Debug, Clone, Copy)]
-/// To a TokenKind assotiated keyword or char
+/// To a TokenKind associated keyword or char
 pub(crate) enum BoundTokenKeyword {
     None,
     Char(char),

@@ -4,8 +4,8 @@ use crate::lexer::TokenKind;
 /// Defines the Parse Error struct that saves the error type and the Span associated with the error
 use std::{error::Error, fmt, fmt::Display};
 
-const LOOKAHEAD: usize = 20;
-const LOOKAFTER: usize = 20;
+const LOOK_AHEAD: usize = 20;
+const LOOK_AFTER: usize = 20;
 
 #[derive(Debug, Clone)]
 /// Errors that can occur during the parsing process
@@ -14,13 +14,13 @@ pub enum ParseErrorKind {
     NonExpectedToken(Vec<TokenKind>, TokenKind),
     /// UnexpectedEOF(expected TokenKinds)
     UnexpectedEOF(Vec<TokenKind>),
-    /// Inditificator is already used
+    /// Identifier is already used
     /// - String for Identification
-    /// - Span: where Identificator was aready defined
-    IdentificatorAlreadyUsed(String, Span),
-    /// Identificator is not kown
+    /// - Span: where Identifier was already defined
+    IdentifierAlreadyUsed(String, Span),
+    /// Identifier  is not known
     /// - String for Identification
-    IdentificatorNotKnown(String),
+    IdentifierNotKnown(String),
     /// Unclosed loop
     UnclosedLoop,
     /// Unexpected End of loop
@@ -32,7 +32,7 @@ pub enum ParseErrorKind {
 /// LexError struct with kind of error and tokens that it refers to
 pub struct ParseError {
     pub kind: ParseErrorKind,
-    /// assotiated span where the error occures
+    /// associated span where the error occurs
     pub span: Span,
 }
 
@@ -40,10 +40,10 @@ impl ParseError {
     /// Generate error message enriched with input information
     /// Used to better locate message and use ParseError span information
     pub fn generate_error_msg(&self, input: &str) -> String {
-        let str_before = &input[self.span.start.saturating_sub(LOOKAHEAD)..self.span.start];
+        let str_before = &input[self.span.start.saturating_sub(LOOK_AHEAD)..self.span.start];
         let str_content = &input[self.span.start..self.span.end];
-        let str_after = &input[self.span.end..if self.span.end + LOOKAFTER < input.len() {
-            self.span.end + LOOKAFTER
+        let str_after = &input[self.span.end..if self.span.end + LOOK_AFTER < input.len() {
+            self.span.end + LOOK_AFTER
         } else {
             input.len()
         }];
@@ -62,9 +62,9 @@ impl Display for ParseError {
                 "Parsing error: Got non expected token {:?}, expected on of these tokens: {:?}",
                 token_gotten, token_expect
             ),
-            ParseErrorKind::IdentificatorAlreadyUsed(ident_name, _) => write!(
+            ParseErrorKind::IdentifierAlreadyUsed(ident_name, _) => write!(
                 f,
-                "Parsing error: Identificator \"{}\" already in use.",
+                "Parsing error: Identifier \"{}\" already in use.",
                 ident_name
             ),
             ParseErrorKind::UnexpectedEOF(token_expect) => write!(
@@ -75,11 +75,11 @@ impl Display for ParseError {
             ParseErrorKind::InternalError(error_string) => {
                 write!(f, "Internal Parser Error: {}", error_string)
             }
-            ParseErrorKind::IdentificatorNotKnown(ident_str) => {
-                write!(f, "Parsing error: Identificator not defined: {}", ident_str,)
+            ParseErrorKind::IdentifierNotKnown(ident_str) => {
+                write!(f, "Parsing error: Identifier not defined: {}", ident_str,)
             }
             ParseErrorKind::UnclosedLoop => write!(f, "Parsing error: Unclosed loop",),
-            ParseErrorKind::UnexpectedEnd => write!(f, "Parsing error: Unexpeted loop end",),
+            ParseErrorKind::UnexpectedEnd => write!(f, "Parsing error: Unexpected loop end",),
         }
     }
 }

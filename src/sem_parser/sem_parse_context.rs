@@ -5,7 +5,7 @@ use super::{ParseError, ParseErrorKind};
 /// Context at the moment only contains variable bound to names and no shadowing
 use crate::lexer::{Span};
 
-/// Kind of Identificator
+/// Kind of Identifier
 ///
 /// For now only Variable but extensible for function etc
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -14,7 +14,7 @@ pub enum IdentKind {
 }
 
 pub type IdentId = usize;
-/// Identificator bound to name
+/// Identifier bound to name
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Ident {
     pub ident_number: IdentId,
@@ -36,7 +36,7 @@ impl ParseContext {
         }
     }
 
-    /// classify identification string gives None when no identificator bound to it
+    /// classify identification string gives None when no identifier bound to it
     pub fn classify(
         &self,
         ident_str: &str,
@@ -46,7 +46,7 @@ impl ParseContext {
             Some(ident) => Ok(ident),
             None => {
                 Err(ParseError {
-                    kind: ParseErrorKind::IdentificatorNotKnown(ident_str.to_string()),
+                    kind: ParseErrorKind::IdentifierNotKnown(ident_str.to_string()),
                     span: associated_span,
                 })
             }
@@ -54,7 +54,7 @@ impl ParseContext {
     }
 
     /// get the next identification number
-    /// - yust adding +1 to the last identification number
+    /// - just adding +1 to the last identification number
     fn get_next_ident_number(&mut self) -> usize {
         let num = self.next_ident_number;
         self.next_ident_number += 1;
@@ -70,12 +70,12 @@ impl ParseContext {
     ) -> Result<Ident, ParseError> {
         let ident_string = ident_name.to_string();
 
-        // early return if identificator already defined
+        // early return if identifier already defined
         if self.ident_mapping.contains_key(ident_name) {
 
             let ident = self.classify(ident_name, ident_span)?;
             return Err(ParseError {
-                kind: ParseErrorKind::IdentificatorAlreadyUsed(ident_string, ident.span),
+                kind: ParseErrorKind::IdentifierAlreadyUsed(ident_string, ident.span),
                 span: ident.span,
             });
         }

@@ -44,7 +44,7 @@ impl<'a> Parser<'a> {
     }
 
     /// Get Current token and advance to the next token
-    /// Own function because it is offen used
+    /// Own function because it is often used
     pub fn bump(&mut self) -> &Token {
         let pos = self.pos;
         self.advance_position();
@@ -68,7 +68,7 @@ impl<'a> Parser<'a> {
             self.advance_position();
             Ok(token)
         }
-        // handle TokenKind with data separatly
+        // handle TokenKind with data separately
         else if let (TokenKind::Number(_), TokenKind::Number(_)) = (token.kind, kind) {
             self.advance_position();
             Ok(token)
@@ -110,7 +110,7 @@ impl<'a> Parser<'a> {
         ret
     }
 
-    // Consumes tokens gready till final expression is gotten
+    // Consumes tokens greedy till final expression is gotten
     // Used for fast Expression parsing
     pub fn parse_expr(&mut self) -> Result<Expr, ParseError> {
         let mut expr = self.parse_non_operand_expr()?;
@@ -139,7 +139,7 @@ impl<'a> Parser<'a> {
         Ok(expr)
     }
 
-    /// Consumes next Seimicolon or Newline
+    /// Consumes next Semicolon or Newline
     /// Returns NonExpectedTokenError when reading any other TokenKind
     pub fn parse_statement_end(&mut self) -> Result<(), ParseError> {
         let token = self.bump();
@@ -160,9 +160,9 @@ impl<'a> Parser<'a> {
         }
     }
 
-    /// Consuming following token as Identificator and looking it up in the Parse Context
-    /// Retruns Error when not a Ident token
-    /// Used for parsing expected Identificator
+    /// Consuming following token as Identifier and looking it up in the Parse Context
+    /// Returns Error when not a Ident token
+    /// Used for parsing expected Identifier
     pub fn parse_ident(&mut self) -> Result<Ident, ParseError> {
         let token = self.current();
 
@@ -186,7 +186,7 @@ impl<'a> Parser<'a> {
         ret
     }
 
-    /// Desides from the first token what statement it is and parses it
+    /// Decides from the first token what statement it is and parses it
     /// Returns ParseError when invalid statement is read
     /// Used for Recursive Descend Parsing Algorithm
     pub fn parse_statement(&mut self) -> Result<Statement, ParseError> {
@@ -393,7 +393,7 @@ impl<'a> Parser<'a> {
 
 /// Parser for parsing tokens from lexical analysis to simplified AST
 ///
-/// Design choises
+/// Design choices
 /// - parser context also handling semantic analysis of variables (no other semantic analysis needed)
 /// - build up parse context for storing information like variables
 /// 

@@ -1,6 +1,6 @@
 # Purpose 
 
-This is a test project to learn using vim, get better in rust and thinking about interperters and compilers.
+This is a test project to learn using vim, get better in rust and thinking about interpreters compilers.
 
 ## Language definition
 
@@ -23,7 +23,7 @@ EXPRESSION ->
 TERM ->
     NUMBER | IDENT
 
-SEPERATOR -> ("\n" | ";")
+SEPARATOR -> ("\n" | ";")
 
 ## How to use
 ```bash
@@ -35,7 +35,7 @@ simple_interpreter -p path_to_file
 The projects consists of four parts:
 - main cli tool for basic usage
 - lexer
-- paser
+- parser
 - interpreter
 
 ### Lexer
@@ -44,7 +44,7 @@ Simple Lexer that only accepting ASCII as input.
 
 ### Parser 
 
-Recursion based parser. The Parser includes also the little sementic analysis needed for this easy language definition.
+Recursion based parser. The Parser includes also the little semantic analysis needed for this easy language definition.
 
 ### Interpreter
 

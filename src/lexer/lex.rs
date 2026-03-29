@@ -5,7 +5,7 @@ use super::lex_error::{LexError,LexErrorKind};
 use super::token::{Token,TokenKind,Span,get_keyword_map};
 
 
-/// lexanizer function transfor file into token vector
+/// tokenization function for transforming string into token vector
 /// Assumes ASCII input only.
 /// Non-ASCII input will lead to error
 ///
@@ -120,9 +120,9 @@ pub fn lex_ascii(lex_input: &str) -> Result<Vec<Token>, LexError> {
                 string.push(next_elem as char);
                 LexState::Ident(position, string)
             }
-            (LexState::Ident(start_postion, mut string), LexTableEntry::Alphabetic) => {
+            (LexState::Ident(start_position, mut string), LexTableEntry::Alphabetic) => {
                 string.push(next_elem as char);
-                LexState::Ident(start_postion, string)
+                LexState::Ident(start_position, string)
             }
             (_, LexTableEntry::Alphabetic) => {
                 return Err(LexError {
