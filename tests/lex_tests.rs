@@ -2,7 +2,7 @@
 
 #[cfg(test)]
 mod tests {
-    use simple_compiler::lexer::{Span, Token, TokenKind, lex};
+    use simple_interpreter::lexer::{Span, Token, TokenKind, lex};
 
     #[test]
     fn test_invalid_char() {

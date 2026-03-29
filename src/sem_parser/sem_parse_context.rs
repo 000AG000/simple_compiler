@@ -13,10 +13,11 @@ pub enum IdentKind {
     Variable,
 }
 
+pub type IdentId = usize;
 /// Identificator bound to name
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Ident {
-    pub ident_number: usize,
+    pub ident_number: IdentId,
     pub kind: IdentKind,
     pub span: Span,
 }

@@ -3,5 +3,5 @@
 version = 4
 
 [[package]]
-name = "simple_compiler"
+name = "simple_interpreter"
 version = "0.1.0"

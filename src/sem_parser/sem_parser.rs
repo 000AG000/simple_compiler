@@ -393,8 +393,17 @@ impl<'a> Parser<'a> {
 /// Parser for parsing tokens from lexical analysis to simplified AST
 ///
 /// Design choises
-/// - parsers uses stack to see in what loop the statements needs to be added
+/// - parser context also handling semantic analysis of variables (no other semantic analysis needed)
 /// - build up parse context for storing information like variables
+/// 
+/// example usage:
+/// ```
+/// use simple_interpreter::lexer::lex;
+/// use simple_interpreter::sem_parser::parse;
+/// let input_str = "let x = 0;";
+/// let input_tokens = lex(input_str).unwrap();
+/// parse(&input_tokens,input_str).unwrap();
+/// ```
 
 pub fn parse(input_tokens: &[Token], input_str: &str) -> Result<Program, ParseError> {
     let parse_context = ParseContext::new();

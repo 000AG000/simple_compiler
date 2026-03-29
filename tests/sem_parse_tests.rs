@@ -3,7 +3,7 @@
 #[cfg(test)]
 mod tests {
 
-    use simple_compiler::{
+    use simple_interpreter::{
         lexer::{Span, lex},
         sem_parser::{
             BinOp, BinOpKind, Expr, ExprKind, Ident, IdentKind, Program, Statement, StatementKind,

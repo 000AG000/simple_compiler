@@ -13,8 +13,9 @@ use super::token::{Token,TokenKind,Span,get_keyword_map};
 ///
 /// example usage:
 /// ```
-/// let lex_input = std::fs::read_to_string("tests/example_files/simple_test.ms").unwrap();
-/// let token_vec = lex(file)?;
+/// use simple_interpreter::lexer::lex;
+/// let lex_input = "let x = 0;";
+/// let token_vec = lex(lex_input).unwrap();
 /// ```
 ///
 pub fn lex(lex_input: &str) -> Result<Vec<Token>, LexError> {
