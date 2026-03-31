@@ -196,7 +196,6 @@ pub fn exec(program: Program, input_str: &str) -> Result<(), GlobalError> {
     while match interpreter.step() {
         Ok(is_done) => is_done,
         Err(runtime_err) => {
-            println!("\n---ERROR OCCURRED---\n{}", runtime_err.generate_error_msg(input_str));
             return Err(runtime_err);
         }
     } {}
