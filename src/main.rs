@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 /// Provide a command line tool for interpret the in the README defined language definition
 use clap::Parser;
-use simple_interpreter::{exec, lex_ascii, parse};
+use simple_interpreter::{exec, lex_ascii, lexer::GlobalError, parse};
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 /// simple_interpreter is an interpreter for a minimal turing complete language.
@@ -12,6 +12,19 @@ struct Args {
     /// file to interpret
     #[clap(short, long)]
     path: String,
+}
+
+/// wrapper function to tokenize, parse and interpret an input string
+/// Used for universal Error handling
+fn interpret_input_str(input_str: &str) -> Result<(), GlobalError> {
+    // Lexical Analysis
+    let token_vector = lex_ascii(input_str)?;
+
+    // Parsing and minimal semantic analysis
+    let program = parse(&token_vector, input_str)?;
+
+    // Interpret file
+    exec(program, input_str)
 }
 
 fn main() {
@@ -29,26 +42,7 @@ fn main() {
         }
     };
 
-    // Lexical Analysis
-    let token_vector = match lex_ascii(&input_str) {
-        Ok(tokens) => tokens,
-        Err(err) => {
-            println!("Lexical Error\n{}", err.generate_error_msg(&input_str));
-            return;
-        }
-    };
-
-    // Parsing and minimal semantic analysis
-    let program = match parse(&token_vector, &input_str) {
-        Ok(program) => program,
-        Err(err) => {
-            println!("Parsing Error\n{}", err.generate_error_msg(&input_str));
-            return;
-        }
-    };
-
-    // Interpret file
-    if let Err(err) = exec(program, &input_str) {
-        println!("Runtime Error\n{}", err.generate_error_msg(&input_str));
+    if let Err(e) = interpret_input_str(&input_str) {
+        println!("{}", e.generate_error_msg(&input_str));
     }
 }
