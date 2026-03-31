@@ -10,7 +10,7 @@ pub fn give_non_expected_token_error(
     associated_span: Span,
 ) -> GlobalError {
     GlobalError::parse(
-        ParseErrorKind::NonExpectedToken(expected_token_kinds, *got_token_kind),
+        ParseErrorKind::NonExpectedToken(expected_token_kinds.to_vec(), *got_token_kind),
         associated_span,
     )
 }

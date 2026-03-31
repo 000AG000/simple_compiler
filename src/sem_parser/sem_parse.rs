@@ -70,8 +70,6 @@ impl<'a> Parser<'a> {
     /// Returns NonExpectedToken error when TokenKinds differ
     /// Used for parsing the next expected token
     pub fn expect(&mut self, kind: TokenKind) -> Result<Token, GlobalError> {
-        const EXPECT_IDENT: &[TokenKind] = &[TokenKind::Ident];
-
         let token = self.current().clone();
         if token.kind == kind {
             self.advance_position();
@@ -83,7 +81,7 @@ impl<'a> Parser<'a> {
             Ok(token)
         } else {
             Err(GlobalError {
-                kind: ErrorKind::Parse(ParseErrorKind::NonExpectedToken(EXPECT_IDENT, token.kind)),
+                kind: ErrorKind::Parse(ParseErrorKind::NonExpectedToken(vec![kind], token.kind)),
                 span: token.span,
             })
         }

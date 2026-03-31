@@ -148,7 +148,7 @@ impl Display for LexErrorKind {
 #[derive(Debug, Clone, PartialEq)]
 pub enum ParseErrorKind {
     /// NonExpectedToken(expected TokenKinds, gotten TokenKind)
-    NonExpectedToken(&'static [TokenKind], TokenKind),
+    NonExpectedToken(Vec<TokenKind>, TokenKind),
     /// UnexpectedEOF(expected TokenKinds)
     UnexpectedEOF(&'static [TokenKind]),
     /// Identifier is already used

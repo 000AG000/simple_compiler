@@ -18,7 +18,7 @@ STATEMENT ->
   | EMPTY
 
 EXPRESSION ->
-    TERM (("+" | "-") TERM)* // will be calculated from left to right
+    TERM (("+" | "-") TERM)* // will be calculated from left to right saturated subtraction
 
 TERM ->
     NUMBER | IDENT
