@@ -13,7 +13,7 @@ mod tests {
 
     /// setting up test environment
     fn init(){
-        env_logger::init();
+        // env_logger::init();
     }
 
     #[test]

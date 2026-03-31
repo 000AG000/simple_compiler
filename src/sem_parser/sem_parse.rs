@@ -3,9 +3,9 @@ use log::trace;
 use super::sem_parser_helper_func::*;
 
 use crate::{
-    lexer::{Span, Token, TokenKind},
+    lexer::{GlobalError, Span, Token, TokenKind},
     sem_parser::{
-        BinOp, BinOpKind, Expr, ExprKind, Ident, ParseError, ParseErrorKind, Statement, StatementKind, sem_parse_context::{IdentKind, ParseContext}
+        BinOp, BinOpKind, Expr, ExprKind, Ident,ErrorKind, ParseErrorKind, Statement, StatementKind, sem_parse_context::{IdentKind, ParseContext}
     },
 };
 
@@ -64,7 +64,7 @@ impl<'a> Parser<'a> {
     /// Consumes next token and compare it to TokenKind
     /// Returns NonExpectedToken error when TokenKinds differ
     /// Used for parsing the next expected token
-    pub fn expect(&mut self, kind: TokenKind) -> Result<Token, ParseError> {
+    pub fn expect(&mut self, kind: TokenKind) -> Result<Token, GlobalError> {
         let token = self.current().clone();
         if token.kind == kind {
             self.advance_position();
@@ -75,8 +75,8 @@ impl<'a> Parser<'a> {
             self.advance_position();
             Ok(token)
         } else {
-            Err(ParseError {
-                kind: ParseErrorKind::NonExpectedToken(vec![kind], token.kind),
+            Err(GlobalError {
+                kind: ErrorKind::Parse(ParseErrorKind::NonExpectedToken(vec![kind], token.kind)),
                 span: token.span,
             })
         }
@@ -85,7 +85,7 @@ impl<'a> Parser<'a> {
     /// Consumes any non Operand TokenKind associated with Expressions
     /// Returns a NonExpectedToken Error when no expected Token is read
     /// Used for Expression parsing
-    pub fn parse_non_operand_expr(&mut self) -> Result<Expr, ParseError> {
+    pub fn parse_non_operand_expr(&mut self) -> Result<Expr, GlobalError> {
         let token = self.current();
 
         let ret = Ok(match token {
@@ -114,7 +114,7 @@ impl<'a> Parser<'a> {
 
     // Consumes tokens greedy till final expression is gotten
     // Used for fast Expression parsing
-    pub fn parse_expr(&mut self) -> Result<Expr, ParseError> {
+    pub fn parse_expr(&mut self) -> Result<Expr, GlobalError> {
         let mut expr = self.parse_non_operand_expr()?;
         let expr_span_start = expr.span.start;
 
@@ -143,7 +143,7 @@ impl<'a> Parser<'a> {
 
     /// Consumes next Semicolon or Newline
     /// Returns NonExpectedTokenError when reading any other TokenKind
-    pub fn parse_statement_end(&mut self) -> Result<(), ParseError> {
+    pub fn parse_statement_end(&mut self) -> Result<(), GlobalError> {
         let token = self.bump();
 
         match token {
@@ -165,7 +165,7 @@ impl<'a> Parser<'a> {
     /// Consuming following token as Identifier and looking it up in the Parse Context
     /// Returns Error when not a Ident token
     /// Used for parsing expected Identifier
-    pub fn parse_ident(&mut self) -> Result<Ident, ParseError> {
+    pub fn parse_ident(&mut self) -> Result<Ident, GlobalError> {
         let token = self.current();
 
         let ret = match token {
@@ -189,9 +189,9 @@ impl<'a> Parser<'a> {
     }
 
     /// Decides from the first token what statement it is and parses it
-    /// Returns ParseError when invalid statement is read
+    /// Returns GlobalError when invalid statement is read
     /// Used for Recursive Descend Parsing Algorithm
-    pub fn parse_statement(&mut self) -> Result<Statement, ParseError> {
+    pub fn parse_statement(&mut self) -> Result<Statement, GlobalError> {
         let start_token = self.current();
         Ok({
             let (span, token_kind) = (start_token.span, start_token.kind);
@@ -215,8 +215,8 @@ impl<'a> Parser<'a> {
                     ));
                 }
                 TokenKind::EOF => {
-                    return Err(ParseError {
-                        kind: ParseErrorKind::UnexpectedEnd,
+                    return Err(GlobalError {
+                        kind: ErrorKind::Parse(ParseErrorKind::UnexpectedEnd),
                         span: Span {
                             start: self.input_str.len(),
                             end: self.input_str.len(),
@@ -261,9 +261,9 @@ impl<'a> Parser<'a> {
     }
 
     /// Consumes all tokens of Parser and parse a program out of it
-    /// Returns ParseError when not be able to parse Tokens
+    /// Returns GlobalError when not be able to parse Tokens
     /// Used for Parsing whole file
-    pub fn parse_program(&mut self) -> Result<Program, ParseError> {
+    pub fn parse_program(&mut self) -> Result<Program, GlobalError> {
         let mut statements = Vec::with_capacity(10);
 
         while self.current().kind != TokenKind::EOF {
@@ -278,9 +278,9 @@ impl<'a> Parser<'a> {
     }
 
     /// Consumes the next tokens bound to a let statement
-    /// Return ParseError when not able to parse let statement
+    /// Return GlobalError when not able to parse let statement
     /// Used as shorthand for parsing statement function
-    pub fn parse_let(&mut self, let_token_span: Span) -> Result<Statement, ParseError> {
+    pub fn parse_let(&mut self, let_token_span: Span) -> Result<Statement, GlobalError> {
         self.advance_position();
         // test for Ident token
         let token = self.expect(TokenKind::Ident)?;
@@ -334,9 +334,9 @@ impl<'a> Parser<'a> {
     }
 
     /// Consumes the next tokens bound to a loop statement
-    /// Return ParseError when not able to parse loop statement
+    /// Return GlobalError when not able to parse loop statement
     /// Used as shorthand for parsing statement function
-    pub fn parse_loop(&mut self) -> Result<Statement, ParseError> {
+    pub fn parse_loop(&mut self) -> Result<Statement, GlobalError> {
         let loop_span = self.current().span;
         self.advance_position();
 
@@ -371,14 +371,14 @@ impl<'a> Parser<'a> {
                 }
                 Some(_) => loop_statements.push(self.parse_statement()?),
                 None => {
-                    return Err(ParseError {
-                        kind: ParseErrorKind::UnexpectedEOF(vec![
+                    return Err(GlobalError {
+                        kind: ErrorKind::Parse(ParseErrorKind::UnexpectedEOF(vec![
                             TokenKind::Let,
                             TokenKind::Loop,
                             TokenKind::End,
                             TokenKind::Ident,
                             TokenKind::Print,
-                        ]),
+                        ])),
                         span: Span {
                             start: self.input_str.len(),
                             end: self.input_str.len(),
@@ -409,7 +409,7 @@ impl<'a> Parser<'a> {
 /// let input_tokens = lex_ascii(input_str).unwrap();
 /// parse(&input_tokens,input_str).unwrap();
 /// ```
-pub fn parse(input_tokens: &[Token], input_str: &str) -> Result<Program, ParseError> {
+pub fn parse(input_tokens: &[Token], input_str: &str) -> Result<Program, GlobalError> {
     let parse_context = ParseContext::new();
 
     let mut parser: Parser = Parser::new(input_tokens, input_str, parse_context);

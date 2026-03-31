@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use log::trace;
 
 use super::lex_table::{LexTable,LexTableEntry};
-use super::lex_error::{LexError,LexErrorKind};
+use super::{GlobalError,ErrorKind,LexErrorKind};
 use super::token::{Token,TokenKind,Span,get_keyword_map};
 
 
@@ -20,7 +20,7 @@ use super::token::{Token,TokenKind,Span,get_keyword_map};
 /// let token_vec = lex_ascii(lex_input).unwrap();
 /// ```
 ///
-pub fn lex_ascii(lex_input: &str) -> Result<Vec<Token>, LexError> {
+pub fn lex_ascii(lex_input: &str) -> Result<Vec<Token>, GlobalError> {
     let mut lexed_tokens: Vec<Token> = Vec::new();
     let lex_table = LexTable::new();
     let keyword_map = get_keyword_map();
@@ -40,17 +40,17 @@ pub fn lex_ascii(lex_input: &str) -> Result<Vec<Token>, LexError> {
         token_vec: &mut Vec<Token>,
         keyword_map: &HashMap<&str, TokenKind>,
         end_position: usize,
-    ) -> Result<(), LexError> {
+    ) -> Result<(), GlobalError> {
         match state {
             LexState::Number(start_position, number_str) => token_vec.push(Token {
                 kind: TokenKind::Number(match number_str.parse::<usize>() {
                     Ok(number) => number,
                     Err(_) => {
-                        return Err(LexError {
-                            kind: LexErrorKind::ConversionError(
+                        return Err(GlobalError {
+                            kind: ErrorKind::Lex(LexErrorKind::ConversionError(
                                 "number".to_string(),
                                 number_str.to_string(),
-                            ),
+                            )),
                             span: Span {
                                 start: start_position,
                                 end: end_position,
@@ -90,7 +90,7 @@ pub fn lex_ascii(lex_input: &str) -> Result<Vec<Token>, LexError> {
 
         // return non ASCII characters
         if ! next_elem.is_ascii(){
-            return Err(LexError { kind: LexErrorKind::UnknownCharacter(next_elem as char), span: Span { start: position, end: position+1 } })
+            return Err(GlobalError { kind: ErrorKind::Lex(LexErrorKind::UnknownCharacter(next_elem as char)), span: Span { start: position, end: position+1 } })
         }
 
         let lex_entry = lex_table.classify(next_elem);
@@ -130,8 +130,8 @@ pub fn lex_ascii(lex_input: &str) -> Result<Vec<Token>, LexError> {
                 LexState::Ident(start_position, string)
             }
             (_, LexTableEntry::Alphabetic) => {
-                return Err(LexError {
-                    kind: LexErrorKind::UnexpectedCharacter(next_elem as char),
+                return Err(GlobalError {
+                    kind: ErrorKind::Lex(LexErrorKind::UnexpectedCharacter(next_elem as char)),
                     span: Span {
                         start: position,
                         end: position + 1,
@@ -148,8 +148,8 @@ pub fn lex_ascii(lex_input: &str) -> Result<Vec<Token>, LexError> {
                 LexState::Ident(start_position, string)
             }
             (_, LexTableEntry::Numeric) => {
-                return Err(LexError {
-                    kind: LexErrorKind::UnexpectedCharacter(next_elem as char),
+                return Err(GlobalError {
+                    kind: ErrorKind::Lex(LexErrorKind::UnexpectedCharacter(next_elem as char)),
                     span: Span {
                         start: position,
                         end: position + 1,
@@ -157,8 +157,8 @@ pub fn lex_ascii(lex_input: &str) -> Result<Vec<Token>, LexError> {
                 });
             }
             (_, LexTableEntry::Undefined) => {
-                return Err(LexError {
-                    kind: LexErrorKind::UnknownCharacter(next_elem as char),
+                return Err(GlobalError {
+                    kind: ErrorKind::Lex(LexErrorKind::UnknownCharacter(next_elem as char)),
                     span: Span {
                         start: position,
                         end: position + 1,
@@ -167,8 +167,8 @@ pub fn lex_ascii(lex_input: &str) -> Result<Vec<Token>, LexError> {
             }
             (LexState::SpaceNeeding, LexTableEntry::Split) => LexState::Normal,
             (LexState::SpaceNeeding, _) => {
-                return Err(LexError {
-                    kind: LexErrorKind::UnexpectedCharacter(next_elem as char),
+                return Err(GlobalError {
+                    kind: ErrorKind::Lex(LexErrorKind::UnexpectedCharacter(next_elem as char)),
                     span: Span {
                         start: position,
                         end: position + 1,

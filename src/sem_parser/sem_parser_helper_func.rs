@@ -1,7 +1,7 @@
 use crate::{
     lexer::{Span, TokenKind},
     sem_parser::{
-        ParseError, ParseErrorKind,
+        GlobalError,ErrorKind, ParseErrorKind,
     },
 };
 
@@ -12,9 +12,9 @@ pub fn give_non_expected_token_error(
     got_token_kind: &TokenKind,
     expected_token_kinds: Vec<TokenKind>,
     associated_span: Span,
-) -> ParseError {
-    ParseError {
-        kind: ParseErrorKind::NonExpectedToken(expected_token_kinds, *got_token_kind),
+) -> GlobalError{
+    GlobalError {
+        kind: ErrorKind::Parse(ParseErrorKind::NonExpectedToken(expected_token_kinds, *got_token_kind)),
         span: associated_span,
     }
 }

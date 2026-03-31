@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use super::{ParseError, ParseErrorKind};
+use super::{GlobalError,ErrorKind, ParseErrorKind};
 /// Parse context used and build up by parser
 /// Context at the moment only contains variable bound to names and no shadowing
 use crate::lexer::{Span};
@@ -49,12 +49,12 @@ impl ParseContext {
         &self,
         ident_str: &str,
         associated_span: Span,
-    ) -> Result<Ident, ParseError> {
+    ) -> Result<Ident, GlobalError> {
         match self.ident_mapping.get(ident_str).copied() {
             Some(ident) => Ok(ident),
             None => {
-                Err(ParseError {
-                    kind: ParseErrorKind::IdentifierNotKnown(ident_str.to_string()),
+                Err(GlobalError {
+                    kind: ErrorKind::Parse(ParseErrorKind::IdentifierNotKnown(ident_str.to_string())),
                     span: associated_span,
                 })
             }
@@ -75,15 +75,15 @@ impl ParseContext {
         ident_name: &str,
         ident_kind: IdentKind,
         ident_span: Span,
-    ) -> Result<Ident, ParseError> {
+    ) -> Result<Ident, GlobalError> {
         let ident_string = ident_name.to_string();
 
         // early return if identifier already defined
         if self.ident_mapping.contains_key(ident_name) {
 
             let ident = self.classify(ident_name, ident_span)?;
-            return Err(ParseError {
-                kind: ParseErrorKind::IdentifierAlreadyUsed(ident_string, ident.span),
+            return Err(GlobalError {
+                kind: ErrorKind::Parse(ParseErrorKind::IdentifierAlreadyUsed(ident_string, ident.span)),
                 span: ident.span,
             });
         }

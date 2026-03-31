@@ -3,7 +3,7 @@ use log::debug;
 use crate::{
     interpreter::{
         frame::{Frame, FrameKind},
-        runtime_err::{RuntimeError, RuntimeErrorKind},
+        GlobalError,ErrorKind,RuntimeErrorKind
     },
     sem_parser::{Expr, IdentId, Program, Statement},
 };
@@ -59,7 +59,7 @@ struct Interpreter<'a> {
 impl<'a> Interpreter<'a> {
     /// execute next statement
     /// when reaching the end it returns false
-    pub fn step(&mut self) -> Result<bool, RuntimeError> {
+    pub fn step(&mut self) -> Result<bool, GlobalError> {
         let statement_index = match self.fetch_next_statement_idx() {
             Some(statement) => statement,
             None => loop {
@@ -130,13 +130,13 @@ impl<'a> Interpreter<'a> {
     }
 
     /// interpret statement in current context
-    pub fn interpret_statement(&mut self, statement: &'a Statement) -> Result<(), RuntimeError> {
+    pub fn interpret_statement(&mut self, statement: &'a Statement) -> Result<(), GlobalError> {
         debug!("Executing statement: {}",statement.pretty_print(self.input_str));
         match &statement.node {
             crate::sem_parser::StatementKind::Let { name, value } => {
                 if self.context.contains_variable(&name.ident_number) {
-                    return Err(RuntimeError {
-                        kind: RuntimeErrorKind::VariableAlreadyDefined,
+                    return Err(GlobalError {
+                        kind: ErrorKind::Runtime(RuntimeErrorKind::VariableAlreadyDefined),
                         span: statement.span,
                     });
                 }
@@ -186,7 +186,7 @@ impl<'a> Interpreter<'a> {
 /// let program = parse(&input_tokens,input_str).unwrap();
 /// exec(program,input_str);
 /// ```
-pub fn exec(program: Program, input_str: &str) -> Result<(), RuntimeError> {
+pub fn exec(program: Program, input_str: &str) -> Result<(), GlobalError> {
     let init_frame = Frame::new(FrameKind::Block, &program.statements);
     let mut interpreter = Interpreter {
         context: RuntimeContext::new(),
