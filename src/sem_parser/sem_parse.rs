@@ -1,3 +1,5 @@
+use log::trace;
+
 use super::sem_parser_helper_func::*;
 
 use crate::{
@@ -13,7 +15,7 @@ use super::Program;
 struct Parser<'a> {
     tokens: &'a [Token],
     pos: usize,
-    input: &'a str,
+    input_str: &'a str,
     context: ParseContext,
 }
 
@@ -22,7 +24,7 @@ impl<'a> Parser<'a> {
         Parser {
             tokens,
             pos: 0,
-            input,
+            input_str: input,
             context,
         }
     }
@@ -92,7 +94,7 @@ impl<'a> Parser<'a> {
                 ..
             } => Expr::new(ExprKind::Ident(
                 self.context
-                    .classify(token.lexeme(self.input), token.span)?,
+                    .classify(token.lexeme(self.input_str), token.span)?,
             ),token.span),
             Token {
                 kind: TokenKind::Number(num),
@@ -170,7 +172,7 @@ impl<'a> Parser<'a> {
             Token {
                 kind: TokenKind::Ident,
                 span,
-            } => self.context.classify(token.lexeme(self.input), *span),
+            } => self.context.classify(token.lexeme(self.input_str), *span),
 
             _ => {
                 return Err(give_non_expected_token_error(
@@ -216,8 +218,8 @@ impl<'a> Parser<'a> {
                     return Err(ParseError {
                         kind: ParseErrorKind::UnexpectedEnd,
                         span: Span {
-                            start: self.input.len(),
-                            end: self.input.len(),
+                            start: self.input_str.len(),
+                            end: self.input_str.len(),
                         },
                     });
                 }
@@ -265,7 +267,9 @@ impl<'a> Parser<'a> {
         let mut statements = Vec::with_capacity(10);
 
         while self.current().kind != TokenKind::EOF {
-            statements.push(self.parse_statement()?);
+            let statement = self.parse_statement()?;
+            trace!("Added Statement {}",statement.pretty_print(self.input_str));
+            statements.push(statement);
         }
 
         Ok(Program {
@@ -282,7 +286,7 @@ impl<'a> Parser<'a> {
         let token = self.expect(TokenKind::Ident)?;
 
         let ident = self.context.new_ident(
-            token.lexeme(self.input),
+            token.lexeme(self.input_str),
             IdentKind::Variable,
             Span {
                 start: let_token_span.start,
@@ -376,8 +380,8 @@ impl<'a> Parser<'a> {
                             TokenKind::Print,
                         ]),
                         span: Span {
-                            start: self.input.len(),
-                            end: self.input.len(),
+                            start: self.input_str.len(),
+                            end: self.input_str.len(),
                         },
                     });
                 }

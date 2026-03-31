@@ -22,6 +22,14 @@ pub struct Ident {
     pub span: Span,
 }
 
+impl Ident{
+    pub fn lexeme<'a>(&self,input_str:&'a str)->&'a str{
+        assert!(input_str.len()> self.span.start ,"Identifier start out of bounds");
+        assert!(input_str.len()> self.span.end,"Identifier end out of bounds");
+        &input_str[self.span.start..self.span.end]
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct ParseContext {
     next_ident_number: usize,

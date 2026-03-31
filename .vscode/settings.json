@@ -4,5 +4,11 @@
         "Formale",
         "Inditificator",
         "Systeme"
-    ]
+    ],
+    "rust-analyzer.runnables.extraEnv": {
+        "RUST_LOG": "trace"
+    },
+    "files.exclude": {
+        "**/.git": false
+    }
 }

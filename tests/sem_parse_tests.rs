@@ -11,8 +11,14 @@ mod tests {
         },
     };
 
+    /// setting up test environment
+    fn init(){
+        env_logger::init();
+    }
+
     #[test]
     fn test_parsing_simple_test_file() {
+        init();
         let filepath = "tests/example_files/simple_test.ms";
         let input_str = std::fs::read_to_string(filepath).unwrap();
         let lex_vec = lex_ascii(&input_str).unwrap();
@@ -75,6 +81,7 @@ mod tests {
 
     #[test]
     fn test_parsing_loop_test_file() {
+        init();
         let filepath = "tests/example_files/loop_test.ms";
         let input_str = std::fs::read_to_string(filepath).unwrap();
         let lex_vec = lex_ascii(&input_str).unwrap();

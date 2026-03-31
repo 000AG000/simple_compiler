@@ -51,6 +51,8 @@ impl RuntimeContext {
 struct Interpreter<'a> {
     context: RuntimeContext,
     stack: Vec<Frame<'a>>,
+    /// input string associated with the program for providing error and debugging context
+    input_str: &'a str
 }
 
 
@@ -129,7 +131,7 @@ impl<'a> Interpreter<'a> {
 
     /// interpret statement in current context
     pub fn interpret_statement(&mut self, statement: &'a Statement) -> Result<(), RuntimeError> {
-        debug!("Executing statement: {:?}",statement);
+        debug!("Executing statement: {}",statement.pretty_print(self.input_str));
         match &statement.node {
             crate::sem_parser::StatementKind::Let { name, value } => {
                 if self.context.contains_variable(&name.ident_number) {
@@ -189,6 +191,7 @@ pub fn exec(program: Program, input_str: &str) -> Result<(), RuntimeError> {
     let mut interpreter = Interpreter {
         context: RuntimeContext::new(),
         stack: vec![init_frame],
+        input_str
     };
     while match interpreter.step() {
         Ok(is_done) => is_done,
