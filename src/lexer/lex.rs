@@ -19,7 +19,7 @@ use super::{ErrorKind, GlobalError, LexErrorKind};
 /// let token_vec = lex_ascii(lex_input).unwrap();
 /// ```
 ///
-pub fn lex_ascii(lex_input: &str) -> Result<Vec<Token>, GlobalError> {
+pub fn lex_ascii(input_str: &str) -> Result<Vec<Token>, GlobalError> {
     let mut lexed_tokens: Vec<Token> = Vec::new();
     let lex_table = LexTable::new();
     let keyword_map = get_keyword_map();
@@ -28,64 +28,58 @@ pub fn lex_ascii(lex_input: &str) -> Result<Vec<Token>, GlobalError> {
     enum LexState {
         Normal,
         SpaceNeeding,
-        /// Number(start position, string)
-        Number(usize, String),
-        /// Ident(start position, string)
-        Ident(usize, String),
+        /// Number with the corresponding span
+        Number(Span),
+        /// Identifier with the corresponding span
+        Ident(Span),
     }
 
     fn handle_string_end(
         state: LexState,
         token_vec: &mut Vec<Token>,
         keyword_map: &HashMap<&str, TokenKind>,
-        end_position: usize,
+        input_str: &str,
     ) -> Result<(), GlobalError> {
         match state {
-            LexState::Number(start_position, number_str) => token_vec.push(Token {
-                kind: TokenKind::Number(match number_str.parse::<usize>() {
-                    Ok(number) => number,
-                    Err(_) => {
-                        return Err(GlobalError {
-                            kind: ErrorKind::Lex(LexErrorKind::ConversionError(
-                                "number".to_string(),
-                                number_str.to_string(),
-                            )),
-                            span: Span {
-                                start: start_position,
-                                end: end_position,
-                            },
-                        });
-                    }
-                }),
-                span: Span {
-                    start: start_position,
-                    end: end_position,
-                },
-            }),
-            LexState::Ident(start_position, ident) => match keyword_map.get(&ident as &str) {
-                Some(token) => token_vec.push(Token {
-                    kind: *token,
-                    span: Span {
-                        start: start_position,
-                        end: end_position,
+            LexState::Number(span) => {
+                let number_str = span.lexeme(input_str);
+                let token = Token {
+                    kind: TokenKind::Number(match number_str.parse::<usize>() {
+                        Ok(number) => number,
+                        Err(_) => {
+                            return Err(GlobalError {
+                                kind: ErrorKind::Lex(LexErrorKind::ConversionError(
+                                    "number".to_string(),
+                                    number_str.to_string(),
+                                )),
+                                span,
+                            });
+                        }
+                    }),
+                    span,
+                };
+
+                trace!("token added: {:?}", &token);
+                token_vec.push(token);
+            }
+            LexState::Ident(span) => {
+                let token = match keyword_map.get(span.lexeme(input_str) as &str) {
+                    Some(token) => Token { kind: *token, span },
+                    None => Token {
+                        kind: TokenKind::Ident,
+                        span,
                     },
-                }),
-                None => token_vec.push(Token {
-                    kind: TokenKind::Ident,
-                    span: Span {
-                        start: start_position,
-                        end: end_position,
-                    },
-                }),
-            },
+                };
+                trace!("token added: {:?}", &token);
+                token_vec.push(token);
+            }
             _ => (),
         }
         Ok(())
     }
     let mut lex_state = LexState::Normal;
-    let mut position = 0;
     // iterate over file buffer
-    for next_elem in lex_input.bytes() {
+    for (position, next_elem) in input_str.bytes().enumerate() {
         // return non ASCII characters
         if !next_elem.is_ascii() {
             return Err(GlobalError {
@@ -123,14 +117,15 @@ pub fn lex_ascii(lex_input: &str) -> Result<Vec<Token>, GlobalError> {
                 });
                 LexState::SpaceNeeding
             }
-            (LexState::Normal, LexTableEntry::Alphabetic) => {
-                let mut string = String::with_capacity(8);
-                string.push(next_elem as char);
-                LexState::Ident(position, string)
-            }
-            (LexState::Ident(start_position, mut string), LexTableEntry::Alphabetic) => {
-                string.push(next_elem as char);
-                LexState::Ident(start_position, string)
+            (LexState::Normal, LexTableEntry::Alphabetic) => LexState::Ident(Span {
+                start: position,
+                end: position + 1,
+            }),
+            (LexState::Ident(Span { start, .. }), LexTableEntry::Alphabetic) => {
+                LexState::Ident(Span {
+                    start,
+                    end: position + 1,
+                })
             }
             (_, LexTableEntry::Alphabetic) => {
                 return Err(GlobalError {
@@ -141,14 +136,27 @@ pub fn lex_ascii(lex_input: &str) -> Result<Vec<Token>, GlobalError> {
                     },
                 });
             }
-            (LexState::Normal, LexTableEntry::Numeric) => {
-                let mut string = String::with_capacity(8);
-                string.push(next_elem as char);
-                LexState::Number(position, string)
+            (LexState::Normal, LexTableEntry::Numeric) => LexState::Number(Span {
+                start: position,
+                end: position + 1,
+            }),
+            (LexState::Ident(Span { start, .. }), LexTableEntry::Numeric) => {
+                LexState::Ident(Span {
+                    start,
+                    end: position + 1,
+                })
             }
-            (LexState::Ident(start_position, mut string), LexTableEntry::Numeric) => {
-                string.push(next_elem as char);
-                LexState::Ident(start_position, string)
+            (LexState::Number(Span { start, .. }), LexTableEntry::Numeric) => {
+                handle_string_end(
+                    LexState::Number(Span {
+                        start,
+                        end: position + 1,
+                    }),
+                    &mut lexed_tokens,
+                    &keyword_map,
+                    input_str,
+                )?;
+                LexState::Normal
             }
             (_, LexTableEntry::Numeric) => {
                 return Err(GlobalError {
@@ -178,30 +186,30 @@ pub fn lex_ascii(lex_input: &str) -> Result<Vec<Token>, GlobalError> {
                     },
                 });
             }
-            (LexState::Number(start_position, in_string), LexTableEntry::Split) => {
+            (LexState::Number(span), LexTableEntry::Split) => {
                 handle_string_end(
-                    LexState::Number(start_position, in_string),
+                    LexState::Number(span),
                     &mut lexed_tokens,
                     &keyword_map,
-                    position,
+                    input_str,
                 )?;
                 LexState::Normal
             }
-            (LexState::Ident(start_position, in_string), LexTableEntry::Split) => {
+            (LexState::Ident(span), LexTableEntry::Split) => {
                 handle_string_end(
-                    LexState::Ident(start_position, in_string),
+                    LexState::Ident(span),
                     &mut lexed_tokens,
                     &keyword_map,
-                    position,
+                    input_str,
                 )?;
                 LexState::Normal
             }
-            (LexState::Number(start_position, string), LexTableEntry::Token(token_kind)) => {
+            (LexState::Number(span), LexTableEntry::Token(token_kind)) => {
                 handle_string_end(
-                    LexState::Number(start_position, string),
+                    LexState::Number(span),
                     &mut lexed_tokens,
                     &keyword_map,
-                    position,
+                    input_str,
                 )?;
                 trace!("token added: {:?}", *token_kind);
                 lexed_tokens.push(Token {
@@ -213,15 +221,12 @@ pub fn lex_ascii(lex_input: &str) -> Result<Vec<Token>, GlobalError> {
                 });
                 LexState::Normal
             }
-            (
-                LexState::Number(start_position, string),
-                LexTableEntry::SpaceNeedingToken(token_kind),
-            ) => {
+            (LexState::Number(span), LexTableEntry::SpaceNeedingToken(token_kind)) => {
                 handle_string_end(
-                    LexState::Number(start_position, string),
+                    LexState::Number(span),
                     &mut lexed_tokens,
                     &keyword_map,
-                    position,
+                    input_str,
                 )?;
                 trace!("token added: {:?}", *token_kind);
                 lexed_tokens.push(Token {
@@ -233,12 +238,15 @@ pub fn lex_ascii(lex_input: &str) -> Result<Vec<Token>, GlobalError> {
                 });
                 LexState::SpaceNeeding
             }
-            (LexState::Ident(start_position, string), LexTableEntry::Token(token_kind)) => {
+            (LexState::Ident(Span { start, .. }), LexTableEntry::Token(token_kind)) => {
                 handle_string_end(
-                    LexState::Ident(start_position, string),
+                    LexState::Ident(Span {
+                        start,
+                        end: position,
+                    }),
                     &mut lexed_tokens,
                     &keyword_map,
-                    position,
+                    input_str,
                 )?;
                 trace!("token added: {:?}", *token_kind);
                 lexed_tokens.push(Token {
@@ -250,15 +258,15 @@ pub fn lex_ascii(lex_input: &str) -> Result<Vec<Token>, GlobalError> {
                 });
                 LexState::Normal
             }
-            (
-                LexState::Ident(start_position, string),
-                LexTableEntry::SpaceNeedingToken(token_kind),
-            ) => {
+            (LexState::Ident(Span { start, .. }), LexTableEntry::SpaceNeedingToken(token_kind)) => {
                 handle_string_end(
-                    LexState::Ident(start_position, string),
+                    LexState::Ident(Span {
+                        start,
+                        end: position,
+                    }),
                     &mut lexed_tokens,
                     &keyword_map,
-                    position,
+                    input_str,
                 )?;
                 trace!("token added: {:?}", *token_kind);
                 lexed_tokens.push(Token {
@@ -273,19 +281,18 @@ pub fn lex_ascii(lex_input: &str) -> Result<Vec<Token>, GlobalError> {
         };
 
         // position is byte index (ASCII-only assumption)
-        position += 1;
     }
 
     // handle end state
-    handle_string_end(lex_state, &mut lexed_tokens, &keyword_map, position)?;
+    handle_string_end(lex_state, &mut lexed_tokens, &keyword_map, input_str)?;
 
     // add end of file token
     trace!("token added: {:?}", TokenKind::EOF);
     lexed_tokens.push(Token {
         kind: TokenKind::EOF,
         span: Span {
-            start: lex_input.len(),
-            end: lex_input.len(),
+            start: input_str.len(),
+            end: input_str.len(),
         },
     });
     Ok(lexed_tokens)

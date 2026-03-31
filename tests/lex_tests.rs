@@ -17,6 +17,13 @@ mod tests {
     }
 
     #[test]
+    fn test_multiple_character_number() {
+        init();
+        let input = "let x = 54;";
+        lex_ascii(input).unwrap();
+    }
+
+    #[test]
     fn test_number_ident_mix() {
         init();
         let input = "abc123";

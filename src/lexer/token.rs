@@ -21,16 +21,22 @@ pub struct Token {
 }
 
 impl Token {
-    pub fn lexeme<'a>(&self, input: &'a str) -> &'a str {
-        &input[self.span.start..self.span.end]
+    pub fn lexeme<'a>(&self, input_str: &'a str) -> &'a str {
+        self.span.lexeme(input_str)
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
 /// Span for token start and end
 pub struct Span {
     pub start: usize,
     pub end: usize,
+}
+
+impl Span {
+    pub fn lexeme<'a>(&self, input_str: &'a str) -> &'a str {
+        &input_str[self.start..self.end]
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
