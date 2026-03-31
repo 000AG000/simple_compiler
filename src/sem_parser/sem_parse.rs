@@ -5,7 +5,9 @@ use super::sem_parser_helper_func::*;
 use crate::{
     lexer::{GlobalError, Span, Token, TokenKind},
     sem_parser::{
-        BinOp, BinOpKind, Expr, ExprKind, Ident,ErrorKind, ParseErrorKind, Statement, StatementKind, sem_parse_context::{IdentKind, ParseContext}
+        BinOp, BinOpKind, ErrorKind, Expr, ExprKind, Ident, ParseErrorKind, Statement,
+        StatementKind,
+        sem_parse_context::{IdentKind, ParseContext},
     },
 };
 
@@ -30,7 +32,10 @@ impl<'a> Parser<'a> {
     }
 
     pub fn current(&self) -> &Token {
-        debug_assert!(self.pos <= self.tokens.len(),"Parser position out of bounds");
+        debug_assert!(
+            self.pos <= self.tokens.len(),
+            "Parser position out of bounds"
+        );
         &self.tokens[self.pos]
     }
 
@@ -92,14 +97,17 @@ impl<'a> Parser<'a> {
             Token {
                 kind: TokenKind::Ident,
                 ..
-            } => Expr::new(ExprKind::Ident(
-                self.context
-                    .classify(token.lexeme(self.input_str), token.span)?,
-            ),token.span),
+            } => Expr::new(
+                ExprKind::Ident(
+                    self.context
+                        .classify(token.lexeme(self.input_str), token.span)?,
+                ),
+                token.span,
+            ),
             Token {
                 kind: TokenKind::Number(num),
                 ..
-            } => Expr::new(ExprKind::Number(*num),token.span),
+            } => Expr::new(ExprKind::Number(*num), token.span),
             _ => {
                 return Err(give_non_expected_token_error(
                     &token.kind,
@@ -119,23 +127,30 @@ impl<'a> Parser<'a> {
         let expr_span_start = expr.span.start;
 
         while let Some(Token {
-            kind: token_kind, span
+            kind: token_kind,
+            span,
         }) = self.peek()
         {
             let op = match token_kind {
-                TokenKind::Plus => BinOp::new(BinOpKind::Add,*span),
-                TokenKind::Minus => BinOp::new(BinOpKind::Sub,*span),
+                TokenKind::Plus => BinOp::new(BinOpKind::Add, *span),
+                TokenKind::Minus => BinOp::new(BinOpKind::Sub, *span),
                 _ => break,
             };
             self.advance_position();
 
             let right_expr = self.parse_non_operand_expr()?;
             let expr_span_end = right_expr.span.end;
-            expr = Expr::new(ExprKind::Binary {
-                left: Box::new(expr),
-                op,
-                right: Box::new(right_expr),
-            },Span { start: expr_span_start, end: expr_span_end });
+            expr = Expr::new(
+                ExprKind::Binary {
+                    left: Box::new(expr),
+                    op,
+                    right: Box::new(right_expr),
+                },
+                Span {
+                    start: expr_span_start,
+                    end: expr_span_end,
+                },
+            );
         }
 
         Ok(expr)
@@ -152,13 +167,11 @@ impl<'a> Parser<'a> {
                 ..
             } => Ok(()),
 
-            token => {
-                Err(give_non_expected_token_error(
-                    &token.kind,
-                    vec![TokenKind::Semicolon, TokenKind::Newline],
-                    token.span,
-                ))
-            }
+            token => Err(give_non_expected_token_error(
+                &token.kind,
+                vec![TokenKind::Semicolon, TokenKind::Newline],
+                token.span,
+            )),
         }
     }
 
@@ -251,10 +264,13 @@ impl<'a> Parser<'a> {
                         end: self.get_previous_token_end(),
                     };
 
-                    Statement::new(StatementKind::Assign {
-                        name: ident,
-                        value: expr,
-                    },statement_span)
+                    Statement::new(
+                        StatementKind::Assign {
+                            name: ident,
+                            value: expr,
+                        },
+                        statement_span,
+                    )
                 }
             }
         })
@@ -268,13 +284,11 @@ impl<'a> Parser<'a> {
 
         while self.current().kind != TokenKind::EOF {
             let statement = self.parse_statement()?;
-            trace!("Added Statement {}",statement.pretty_print(self.input_str));
+            trace!("Added Statement {}", statement.pretty_print(self.input_str));
             statements.push(statement);
         }
 
-        Ok(Program {
-            statements,
-        })
+        Ok(Program { statements })
     }
 
     /// Consumes the next tokens bound to a let statement
@@ -301,10 +315,16 @@ impl<'a> Parser<'a> {
                 kind: TokenKind::Semicolon | TokenKind::Newline,
                 ..
             } => {
-                let new_statement = Statement::new(StatementKind::Let {
-                    name: ident,
-                    value: None,
-                },Span { start: let_token_span.start, end: token.span.end });
+                let new_statement = Statement::new(
+                    StatementKind::Let {
+                        name: ident,
+                        value: None,
+                    },
+                    Span {
+                        start: let_token_span.start,
+                        end: token.span.end,
+                    },
+                );
 
                 self.advance_position();
                 return Ok(new_statement);
@@ -327,10 +347,16 @@ impl<'a> Parser<'a> {
 
         self.parse_statement_end()?;
 
-        Ok(Statement::new(StatementKind::Let {
-            name: ident,
-            value: Some(expr),
-        },Span { start: let_token_span.start, end: self.get_previous_token_end() }))
+        Ok(Statement::new(
+            StatementKind::Let {
+                name: ident,
+                value: Some(expr),
+            },
+            Span {
+                start: let_token_span.start,
+                end: self.get_previous_token_end(),
+            },
+        ))
     }
 
     /// Consumes the next tokens bound to a loop statement
@@ -388,10 +414,16 @@ impl<'a> Parser<'a> {
             }
         }
 
-        Ok(Statement::new(StatementKind::Loop {
-            var: ident,
-            body: loop_statements,
-        },Span { start: loop_span.start, end: self.get_previous_token_end() }))
+        Ok(Statement::new(
+            StatementKind::Loop {
+                var: ident,
+                body: loop_statements,
+            },
+            Span {
+                start: loop_span.start,
+                end: self.get_previous_token_end(),
+            },
+        ))
     }
 }
 
@@ -400,7 +432,7 @@ impl<'a> Parser<'a> {
 /// Design choices
 /// - parser context also handling semantic analysis of variables (no other semantic analysis needed)
 /// - build up parse context for storing information like variables
-/// 
+///
 /// example usage:
 /// ```
 /// use simple_interpreter::lexer::lex_ascii;

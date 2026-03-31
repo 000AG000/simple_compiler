@@ -32,19 +32,23 @@ fn main() {
     // Lexical Analysis
     let token_vector = match lex_ascii(&input_str) {
         Ok(tokens) => tokens,
-        Err(err) => {println!("Lexical Error\n{}",err.generate_error_msg(&input_str));return},
+        Err(err) => {
+            println!("Lexical Error\n{}", err.generate_error_msg(&input_str));
+            return;
+        }
     };
 
     // Parsing and minimal semantic analysis
-    let program = match parse(&token_vector, &input_str){
+    let program = match parse(&token_vector, &input_str) {
         Ok(program) => program,
-        Err(err) => {println!("Parsing Error\n{}",err.generate_error_msg(&input_str));return},
-
+        Err(err) => {
+            println!("Parsing Error\n{}", err.generate_error_msg(&input_str));
+            return;
+        }
     };
 
     // Interpret file
-    if let Err(err) = exec(program, &input_str){
-        println!("Runtime Error\n{}",err.generate_error_msg(&input_str));
-
+    if let Err(err) = exec(program, &input_str) {
+        println!("Runtime Error\n{}", err.generate_error_msg(&input_str));
     }
 }

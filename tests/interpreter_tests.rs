@@ -3,14 +3,10 @@
 #[cfg(test)]
 mod tests {
 
-    use simple_interpreter::{
-        interpreter::exec, lexer::{lex_ascii}, sem_parser::{
-            parse,
-        }
-    };
+    use simple_interpreter::{interpreter::exec, lexer::lex_ascii, sem_parser::parse};
 
     /// setting up test environment
-    fn init(){
+    fn init() {
         // env_logger::init();
     }
 

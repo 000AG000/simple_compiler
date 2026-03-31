@@ -1,12 +1,12 @@
-use std::collections::HashMap;
-use log::debug;
 use crate::{
     interpreter::{
+        ErrorKind, GlobalError, RuntimeErrorKind,
         frame::{Frame, FrameKind},
-        GlobalError,ErrorKind,RuntimeErrorKind
     },
     sem_parser::{Expr, IdentId, Program, Statement},
 };
+use log::debug;
+use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq)]
 /// Runtime Context for storing variables
@@ -40,7 +40,7 @@ impl RuntimeContext {
 
     // getting the current context of
     pub fn get_variable(&self, ident_id: &IdentId) -> usize {
-        debug_assert!(self.contains_variable(ident_id),"variable not found");
+        debug_assert!(self.contains_variable(ident_id), "variable not found");
         self.variables[ident_id]
     }
 }
@@ -52,9 +52,8 @@ struct Interpreter<'a> {
     context: RuntimeContext,
     stack: Vec<Frame<'a>>,
     /// input string associated with the program for providing error and debugging context
-    input_str: &'a str
+    input_str: &'a str,
 }
-
 
 impl<'a> Interpreter<'a> {
     /// execute next statement
@@ -66,18 +65,23 @@ impl<'a> Interpreter<'a> {
                 self.stack.pop();
 
                 // was last frame
-                if self.stack.is_empty(){
-                    return Ok(false)
+                if self.stack.is_empty() {
+                    return Ok(false);
                 }
 
-                if let Some(frame) = self.fetch_next_statement_idx() { break frame }
+                if let Some(frame) = self.fetch_next_statement_idx() {
+                    break frame;
+                }
             },
         };
         let current_frame = match self.stack.last_mut() {
             Some(frame) => frame,
             None => return Ok(false),
         };
-        debug_assert!(current_frame.statements.len() >= statement_index,"interpreters statement index out of");
+        debug_assert!(
+            current_frame.statements.len() >= statement_index,
+            "interpreters statement index out of"
+        );
         let statement = &current_frame.statements[statement_index];
 
         self.interpret_statement(statement)?;
@@ -109,21 +113,20 @@ impl<'a> Interpreter<'a> {
     /// get statement index of the frame
     /// statement index is used for borrowing reasons
     /// returning None, when current frame is at the end of execution
-    pub fn fetch_next_statement_idx(&mut self) -> Option<usize>{
+    pub fn fetch_next_statement_idx(&mut self) -> Option<usize> {
         let current_frame = self.stack.last_mut()?;
         let mut current_ip = current_frame.ip;
-        if current_ip >= current_frame.statements.len(){
-            match &mut current_frame.kind{
+        if current_ip >= current_frame.statements.len() {
+            match &mut current_frame.kind {
                 FrameKind::Loop { remaining } => {
-                    if *remaining == 0{
-                        return None
+                    if *remaining == 0 {
+                        return None;
                     }
                     *remaining -= 1;
                     current_ip = 0;
-                },
-                _ => return None
+                }
+                _ => return None,
             }
-
         }
         current_frame.ip = current_ip + 1;
         Some(current_ip)
@@ -131,7 +134,10 @@ impl<'a> Interpreter<'a> {
 
     /// interpret statement in current context
     pub fn interpret_statement(&mut self, statement: &'a Statement) -> Result<(), GlobalError> {
-        debug!("Executing statement: {}",statement.pretty_print(self.input_str));
+        debug!(
+            "Executing statement: {}",
+            statement.pretty_print(self.input_str)
+        );
         match &statement.node {
             crate::sem_parser::StatementKind::Let { name, value } => {
                 if self.context.contains_variable(&name.ident_number) {
@@ -155,10 +161,8 @@ impl<'a> Interpreter<'a> {
             crate::sem_parser::StatementKind::Loop { var, body } => {
                 let num = self.context.get_variable(&var.ident_number);
                 if num != 0 {
-                    let loop_frame =
-                        Frame::new(FrameKind::Loop { remaining: num - 1 }, body);
+                    let loop_frame = Frame::new(FrameKind::Loop { remaining: num - 1 }, body);
                     self.stack.push(loop_frame);
-                    
                 }
             }
             crate::sem_parser::StatementKind::Print { name: ident } => {
@@ -171,11 +175,11 @@ impl<'a> Interpreter<'a> {
 }
 
 /// execute parsed program till end
-/// 
+///
 /// Design choices:
 /// - used frame based ExecutionContext
 /// - introduced Interpreter struct to handle stack frame and execution context
-/// 
+///
 /// example usage:
 /// ```
 /// use simple_interpreter::lexer::lex_ascii;
@@ -191,7 +195,7 @@ pub fn exec(program: Program, input_str: &str) -> Result<(), GlobalError> {
     let mut interpreter = Interpreter {
         context: RuntimeContext::new(),
         stack: vec![init_frame],
-        input_str
+        input_str,
     };
     while match interpreter.step() {
         Ok(is_done) => is_done,

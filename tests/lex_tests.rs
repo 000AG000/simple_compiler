@@ -4,14 +4,13 @@
 mod tests {
     use simple_interpreter::lexer::{Span, Token, TokenKind, lex_ascii};
 
-
     /// setting up test environment
-    fn init(){
+    fn init() {
         // env_logger::init();
     }
 
     #[test]
-    fn test_invalid_char(){
+    fn test_invalid_char() {
         init();
         let input = "let x = 5$;";
         assert!(lex_ascii(input).is_err());
@@ -22,7 +21,13 @@ mod tests {
         init();
         let input = "abc123";
         let tokens = lex_ascii(input).unwrap();
-        assert_eq!(tokens[0],Token{kind:TokenKind::Ident,span:Span { start: 0, end: 6 }})
+        assert_eq!(
+            tokens[0],
+            Token {
+                kind: TokenKind::Ident,
+                span: Span { start: 0, end: 6 }
+            }
+        )
     }
 
     #[test]
@@ -30,7 +35,10 @@ mod tests {
         init();
         let input = "";
         let tokens = lex_ascii(input).unwrap();
-        let eof_tokens = vec![Token{kind:TokenKind::EOF,span:Span{start:0,end:0}}];
+        let eof_tokens = vec![Token {
+            kind: TokenKind::EOF,
+            span: Span { start: 0, end: 0 },
+        }];
         assert_eq!(tokens, eof_tokens);
     }
 
@@ -115,10 +123,10 @@ mod tests {
                 kind: TokenKind::Semicolon,
                 span: Span { start: 29, end: 30 },
             },
-             Token {
+            Token {
                 kind: TokenKind::EOF,
                 span: Span { start: 30, end: 30 },
-            },           
+            },
         ];
 
         assert_eq!(lex_vec, simple_test_file_vec);

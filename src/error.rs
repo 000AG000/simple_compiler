@@ -84,7 +84,7 @@ impl Display for GlobalError {
                 ParseErrorKind::UnclosedLoop => write!(f, "Parsing error: Unclosed loop",),
                 ParseErrorKind::UnexpectedEnd => write!(f, "Parsing error: Unexpected loop end",),
             },
-            ErrorKind::Runtime(runtime_error_kind) => match &runtime_error_kind{
+            ErrorKind::Runtime(runtime_error_kind) => match &runtime_error_kind {
                 RuntimeErrorKind::InternalError(error_str) => {
                     write!(f, "Runtime error: {}", error_str)
                 }

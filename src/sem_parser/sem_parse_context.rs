@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
-use super::{GlobalError,ErrorKind, ParseErrorKind};
+use super::{ErrorKind, GlobalError, ParseErrorKind};
 /// Parse context used and build up by parser
 /// Context at the moment only contains variable bound to names and no shadowing
-use crate::lexer::{Span};
+use crate::lexer::Span;
 
 /// Kind of Identifier
 ///
@@ -22,10 +22,16 @@ pub struct Ident {
     pub span: Span,
 }
 
-impl Ident{
-    pub fn lexeme<'a>(&self,input_str:&'a str)->&'a str{
-        assert!(input_str.len()> self.span.start ,"Identifier start out of bounds");
-        assert!(input_str.len()> self.span.end,"Identifier end out of bounds");
+impl Ident {
+    pub fn lexeme<'a>(&self, input_str: &'a str) -> &'a str {
+        assert!(
+            input_str.len() > self.span.start,
+            "Identifier start out of bounds"
+        );
+        assert!(
+            input_str.len() > self.span.end,
+            "Identifier end out of bounds"
+        );
         &input_str[self.span.start..self.span.end]
     }
 }
@@ -45,19 +51,13 @@ impl ParseContext {
     }
 
     /// classify identification string gives None when no identifier bound to it
-    pub fn classify(
-        &self,
-        ident_str: &str,
-        associated_span: Span,
-    ) -> Result<Ident, GlobalError> {
+    pub fn classify(&self, ident_str: &str, associated_span: Span) -> Result<Ident, GlobalError> {
         match self.ident_mapping.get(ident_str).copied() {
             Some(ident) => Ok(ident),
-            None => {
-                Err(GlobalError {
-                    kind: ErrorKind::Parse(ParseErrorKind::IdentifierNotKnown(ident_str.to_string())),
-                    span: associated_span,
-                })
-            }
+            None => Err(GlobalError {
+                kind: ErrorKind::Parse(ParseErrorKind::IdentifierNotKnown(ident_str.to_string())),
+                span: associated_span,
+            }),
         }
     }
 
@@ -80,10 +80,12 @@ impl ParseContext {
 
         // early return if identifier already defined
         if self.ident_mapping.contains_key(ident_name) {
-
             let ident = self.classify(ident_name, ident_span)?;
             return Err(GlobalError {
-                kind: ErrorKind::Parse(ParseErrorKind::IdentifierAlreadyUsed(ident_string, ident.span)),
+                kind: ErrorKind::Parse(ParseErrorKind::IdentifierAlreadyUsed(
+                    ident_string,
+                    ident.span,
+                )),
                 span: ident.span,
             });
         }
@@ -94,8 +96,7 @@ impl ParseContext {
             kind: ident_kind,
             span: ident_span,
         };
-        self.ident_mapping
-            .insert(ident_name.to_string(), ident);
+        self.ident_mapping.insert(ident_name.to_string(), ident);
 
         Ok(ident)
     }

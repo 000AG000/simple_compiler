@@ -12,7 +12,7 @@ mod tests {
     };
 
     /// setting up test environment
-    fn init(){
+    fn init() {
         // env_logger::init();
     }
 
@@ -68,9 +68,7 @@ mod tests {
                 ),
                 Statement::new(StatementKind::Empty, Span { start: 21, end: 22 }),
                 Statement::new(
-                    StatementKind::Print {
-                        name: ident_x,
-                    },
+                    StatementKind::Print { name: ident_x },
                     Span { start: 22, end: 30 },
                 ),
             ],

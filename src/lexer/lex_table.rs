@@ -1,10 +1,11 @@
 //! lex_table.rs
 //! Defines LexTable struct for O(1) checking to possible TokenKind mapping
 //! - classify method for getting associated type
-//! 
+//!
 
-
-use crate::lexer::token::{TokenKind,CONSTANT_TOKENS,BoundTokenKeyword,get_token_keyword,get_token_kind_clone};
+use crate::lexer::token::{
+    BoundTokenKeyword, CONSTANT_TOKENS, TokenKind, get_token_keyword, get_token_kind_clone,
+};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum LexTableEntry {
@@ -35,11 +36,7 @@ impl LexTable {
         for i in 0..u8::MAX {
             match char::from_u32(i as u32) {
                 None => (),
-                Some(char) => match (
-                    char,
-                    char_mask[i as usize],
-                    space_mask[i as usize],
-                ) {
+                Some(char) => match (char, char_mask[i as usize], space_mask[i as usize]) {
                     ('a'..='z', ..) => entries[i as usize] = LexTableEntry::Alphabetic,
                     ('A'..='Z', ..) => entries[i as usize] = LexTableEntry::Alphabetic,
                     ('0'..='9', ..) => entries[i as usize] = LexTableEntry::Numeric,
@@ -81,7 +78,9 @@ impl LexTable {
         // no for loop allowed because of const
 
         while i < CONSTANT_TOKENS.len() {
-            if let BoundTokenKeyword::CharWithNeededSpace(c) = get_token_keyword(&CONSTANT_TOKENS[i]) {
+            if let BoundTokenKeyword::CharWithNeededSpace(c) =
+                get_token_keyword(&CONSTANT_TOKENS[i])
+            {
                 lex_table[c as usize] = Some(get_token_kind_clone(&CONSTANT_TOKENS[i]));
             }
             i += 1;

@@ -2,10 +2,9 @@ use std::collections::HashMap;
 
 use log::trace;
 
-use super::lex_table::{LexTable,LexTableEntry};
-use super::{GlobalError,ErrorKind,LexErrorKind};
-use super::token::{Token,TokenKind,Span,get_keyword_map};
-
+use super::lex_table::{LexTable, LexTableEntry};
+use super::token::{Span, Token, TokenKind, get_keyword_map};
+use super::{ErrorKind, GlobalError, LexErrorKind};
 
 /// tokenization function for transforming string into token vector
 /// Assumes ASCII input only.
@@ -87,10 +86,15 @@ pub fn lex_ascii(lex_input: &str) -> Result<Vec<Token>, GlobalError> {
     let mut position = 0;
     // iterate over file buffer
     for next_elem in lex_input.bytes() {
-
         // return non ASCII characters
-        if ! next_elem.is_ascii(){
-            return Err(GlobalError { kind: ErrorKind::Lex(LexErrorKind::UnknownCharacter(next_elem as char)), span: Span { start: position, end: position+1 } })
+        if !next_elem.is_ascii() {
+            return Err(GlobalError {
+                kind: ErrorKind::Lex(LexErrorKind::UnknownCharacter(next_elem as char)),
+                span: Span {
+                    start: position,
+                    end: position + 1,
+                },
+            });
         }
 
         let lex_entry = lex_table.classify(next_elem);
@@ -98,8 +102,7 @@ pub fn lex_ascii(lex_input: &str) -> Result<Vec<Token>, GlobalError> {
         lex_state = match (lex_state, lex_entry) {
             (LexState::Normal, LexTableEntry::Split) => LexState::Normal,
             (LexState::Normal, LexTableEntry::Token(token)) => {
-
-                trace!("token added: {:?}",*token);
+                trace!("token added: {:?}", *token);
                 lexed_tokens.push(Token {
                     kind: *token,
                     span: Span {
@@ -110,7 +113,7 @@ pub fn lex_ascii(lex_input: &str) -> Result<Vec<Token>, GlobalError> {
                 LexState::Normal
             }
             (LexState::Normal, LexTableEntry::SpaceNeedingToken(token)) => {
-                trace!("token added: {:?}",*token);
+                trace!("token added: {:?}", *token);
                 lexed_tokens.push(Token {
                     kind: *token,
                     span: Span {
@@ -200,7 +203,7 @@ pub fn lex_ascii(lex_input: &str) -> Result<Vec<Token>, GlobalError> {
                     &keyword_map,
                     position,
                 )?;
-                trace!("token added: {:?}",*token_kind);
+                trace!("token added: {:?}", *token_kind);
                 lexed_tokens.push(Token {
                     kind: *token_kind,
                     span: Span {
@@ -220,7 +223,7 @@ pub fn lex_ascii(lex_input: &str) -> Result<Vec<Token>, GlobalError> {
                     &keyword_map,
                     position,
                 )?;
-                trace!("token added: {:?}",*token_kind);
+                trace!("token added: {:?}", *token_kind);
                 lexed_tokens.push(Token {
                     kind: *token_kind,
                     span: Span {
@@ -237,7 +240,7 @@ pub fn lex_ascii(lex_input: &str) -> Result<Vec<Token>, GlobalError> {
                     &keyword_map,
                     position,
                 )?;
-                trace!("token added: {:?}",*token_kind);
+                trace!("token added: {:?}", *token_kind);
                 lexed_tokens.push(Token {
                     kind: *token_kind,
                     span: Span {
@@ -257,7 +260,7 @@ pub fn lex_ascii(lex_input: &str) -> Result<Vec<Token>, GlobalError> {
                     &keyword_map,
                     position,
                 )?;
-                trace!("token added: {:?}",*token_kind);
+                trace!("token added: {:?}", *token_kind);
                 lexed_tokens.push(Token {
                     kind: *token_kind,
                     span: Span {
@@ -277,7 +280,13 @@ pub fn lex_ascii(lex_input: &str) -> Result<Vec<Token>, GlobalError> {
     handle_string_end(lex_state, &mut lexed_tokens, &keyword_map, position)?;
 
     // add end of file token
-    trace!("token added: {:?}",TokenKind::EOF);
-    lexed_tokens.push(Token { kind: TokenKind::EOF, span: Span { start: lex_input.len() , end:  lex_input.len()}});
+    trace!("token added: {:?}", TokenKind::EOF);
+    lexed_tokens.push(Token {
+        kind: TokenKind::EOF,
+        span: Span {
+            start: lex_input.len(),
+            end: lex_input.len(),
+        },
+    });
     Ok(lexed_tokens)
 }
