@@ -2,6 +2,8 @@
 
 This is a test project to learn using vim, get better in rust and thinking about interpreters compilers.
 
+In the future this project should become a compiler at the moment it is only an interpreter.
+
 ## Language definition
 
 This language is based on the Loop-language used in the lecture "Formale Systeme".
