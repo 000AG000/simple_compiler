@@ -60,7 +60,7 @@ struct Interpreter<'a> {
 impl<'a> Interpreter<'a> {
     /// execute next statement
     /// when reaching the end it returns false
-    pub fn step(&mut self) -> Result<bool, GlobalError> {
+    pub fn step_with_output(&mut self, mut output: &mut dyn Write) -> Result<bool, GlobalError> {
         let statement_index = match self.fetch_next_statement_idx() {
             Some(statement) => statement,
             None => loop {
@@ -86,7 +86,7 @@ impl<'a> Interpreter<'a> {
         );
         let statement = &current_frame.statements[statement_index];
 
-        self.interpret_statement(statement)?;
+        self.interpret_statement(statement, &mut output)?;
 
         Ok(true)
     }
@@ -138,7 +138,11 @@ impl<'a> Interpreter<'a> {
     }
 
     /// interpret statement in current context
-    pub fn interpret_statement(&mut self, statement: &'a Statement) -> Result<(), GlobalError> {
+    pub fn interpret_statement(
+        &mut self,
+        statement: &'a Statement,
+        output: &mut dyn Write,
+    ) -> Result<(), GlobalError> {
         debug!(
             "Executing statement: {}",
             statement.pretty_print(self.input_str)
@@ -178,7 +182,12 @@ impl<'a> Interpreter<'a> {
                     Ok(var) => var,
                     Err(kind) => return Err(GlobalError::runtime(kind, ident.span)),
                 };
-                println!("{}", variable);
+                if writeln!(output, "{}", variable).is_err() {
+                    return Err(GlobalError::runtime(
+                        RuntimeErrorKind::OutputNotWritable,
+                        ident.span,
+                    ));
+                };
             }
             crate::semantic_parser::StatementKind::Empty => (),
         }
@@ -203,18 +212,45 @@ impl<'a> Interpreter<'a> {
 /// exec(program,input_str);
 /// ```
 pub fn exec(program: Program, input_str: &str) -> Result<(), GlobalError> {
+    let mut stdout = String::new();
+    exec_with_output(program, input_str, &mut stdout)?;
+    print!("{}", stdout);
+    Ok(())
+}
+
+use std::fmt::Write;
+
+/// execute program with given writer as output
+/// execute parsed program till end
+///
+/// Design choices:
+/// - used frame based ExecutionContext
+/// - introduced Interpreter struct to handle stack frame and execution context
+///
+/// example usage:
+/// ```
+/// use simple_interpreter::lexer::lex_ascii;
+/// use simple_interpreter::semantic_parser::parse;
+/// use simple_interpreter::interpreter::exec_with_output;
+/// let input_str = "let x = 0;print x;";
+/// let input_tokens = lex_ascii(input_str).unwrap();
+/// let program = parse(&input_tokens,input_str).unwrap();
+/// let mut stdout = String::new();
+/// exec_with_output(program,input_str,&mut stdout);
+/// ```
+pub fn exec_with_output(
+    program: Program,
+    input_str: &str,
+    output: &mut impl Write,
+) -> Result<(), GlobalError> {
     let init_frame = Frame::new(FrameKind::Block, &program.statements);
     let mut interpreter = Interpreter {
         context: RuntimeContext::new(),
         stack: vec![init_frame],
         input_str,
     };
-    while match interpreter.step() {
-        Ok(is_done) => is_done,
-        Err(runtime_err) => {
-            return Err(runtime_err);
-        }
-    } {}
+
+    while interpreter.step_with_output(output)? {}
 
     Ok(())
 }

@@ -113,6 +113,9 @@ impl Display for GlobalError {
                 RuntimeErrorKind::VariableNotFound => {
                     write!(f, "Runtime error: Variable not found")
                 }
+                RuntimeErrorKind::OutputNotWritable => {
+                    write!(f, "Runtime error: Could not write to output")
+                }
             },
         }
     }
@@ -169,4 +172,5 @@ pub enum ParseErrorKind {
 pub enum RuntimeErrorKind {
     VariableAlreadyDefined,
     VariableNotFound,
+    OutputNotWritable,
 }

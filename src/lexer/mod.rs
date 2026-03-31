@@ -1,7 +1,7 @@
 //! Lexer module for providing lexical analysis
 
-mod main_lexer;
 mod lex_table;
+mod main_lexer;
 mod token;
 
 pub use crate::error::{ErrorKind, GlobalError, LexErrorKind};
