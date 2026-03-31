@@ -75,7 +75,7 @@ The projects consists of four parts:
 
 ### Lexer
 
-Simple Lexer that only accepting ASCII as input.
+Simple Lexer that only accepts,get_token_kind_clone ASCII as input.
 
 ### Parser 
 

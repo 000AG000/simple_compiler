@@ -1,5 +1,5 @@
 mod frame;
-mod interpret;
+mod main_interpreter;
 
 pub use crate::error::{ErrorKind, GlobalError, RuntimeErrorKind};
-pub use interpret::exec;
+pub use main_interpreter::exec;

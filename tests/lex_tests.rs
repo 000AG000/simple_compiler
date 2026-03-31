@@ -6,7 +6,7 @@ mod tests {
 
     /// setting up test environment
     fn init() {
-        // env_logger::init();
+        let _ = env_logger::builder().is_test(true).try_init();
     }
 
     #[test]
