@@ -1,48 +1,101 @@
-//! Tests for Lexer
+mod common;
+use common::*;
 
-#[cfg(test)]
-mod tests {
+#[test]
+fn exec_simple_assignment_and_print() {
+    init();
 
-    use simple_interpreter::{interpreter::exec, lexer::lex_ascii, semantic_parser::parse};
+    let input = "let x = 5; print x;";
+    let output = run_program(input);
 
-    /// setting up test environment
-    fn init() {
-        let _ = env_logger::builder().is_test(true).try_init();
-    }
+    assert_eq!(output.trim(), "5");
+}
 
-    #[test]
-    fn test_exec_simple_test_file() {
-        init();
-        let filepath = "tests/example_files/simple_test.ms";
-        let input_str = std::fs::read_to_string(filepath).unwrap();
-        let lex_vec = lex_ascii(&input_str).unwrap();
+#[test]
+fn exec_multiple_assignments() {
+    init();
 
-        let program = match parse(&lex_vec, &input_str) {
-            Ok(program) => program,
-            Err(error) => {
-                println!("{}", error.generate_error_msg(&input_str));
-                panic!("program not read in correctly");
-            }
-        };
+    let input = "let x = 1; x = x + 2; print x;";
+    let output = run_program(input);
 
-        exec(program, &input_str).unwrap();
-    }
+    assert_eq!(output.trim(), "3");
+}
 
-    #[test]
-    fn test_exec_loop_test_file() {
-        init();
-        let filepath = "tests/example_files/loop_test.ms";
-        let input_str = std::fs::read_to_string(filepath).unwrap();
-        let lex_vec = lex_ascii(&input_str).unwrap();
+#[test]
+fn exec_loop_counts_down() {
+    init();
 
-        let program = match parse(&lex_vec, &input_str) {
-            Ok(program) => program,
-            Err(error) => {
-                eprintln!("{}", error.generate_error_msg(&input_str));
-                panic!("program not read in correctly");
-            }
-        };
+    let input = r#"
+        let x = 3;
+        LOOP x DO
+            print x;
+            x = x - 1;
+        END
+    "#;
 
-        exec(program, &input_str).unwrap();
-    }
+    let output = run_program(input);
+
+    assert_eq!(output.trim(), "3\n2\n1");
+}
+
+#[test]
+fn exec_loop_zero_does_nothing() {
+    init();
+
+    let input = r#"
+        let x = 0;
+        LOOP x DO
+            print x;
+        END
+    "#;
+
+    let output = run_program(input);
+
+    assert_eq!(output.trim(), "");
+}
+
+#[test]
+fn exec_nested_loops() {
+    init();
+
+    let input = r#"
+        let x = 2;
+        let y;
+        LOOP x DO
+            y = 2
+            LOOP y DO
+                print y;
+                y = y - 1;
+            END
+            x = x - 1;
+        END
+    "#;
+
+    let output = run_program(input);
+
+    assert_eq!(output.trim(), "2\n1\n2\n1");
+}
+
+#[test]
+fn exec_subtraction_saturates() {
+    init();
+
+    let input = "let x = 1; x = x - 5; print x;";
+    let output = run_program(input);
+
+    assert_eq!(output.trim(), "0"); // document this behavior!
+}
+
+#[test]
+fn exec_fails_on_undefined_variable() {
+    init();
+
+    run_program_expect_error("print x;");
+}
+
+#[test]
+fn exec_fails_on_redefinition() {
+    init();
+
+    run_program_expect_error("let x = 1; let x = 2;");
 }
