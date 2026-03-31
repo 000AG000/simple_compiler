@@ -147,16 +147,10 @@ pub fn lex_ascii(input_str: &str) -> Result<Vec<Token>, GlobalError> {
                 })
             }
             (LexState::Number(Span { start, .. }), LexTableEntry::Numeric) => {
-                handle_string_end(
-                    LexState::Number(Span {
-                        start,
-                        end: position + 1,
-                    }),
-                    &mut lexed_tokens,
-                    &keyword_map,
-                    input_str,
-                )?;
-                LexState::Normal
+                LexState::Number(Span {
+                    start,
+                    end: position + 1,
+                })
             }
             (_, LexTableEntry::Numeric) => {
                 return Err(GlobalError::lex(

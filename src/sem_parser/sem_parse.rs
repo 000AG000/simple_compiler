@@ -70,6 +70,8 @@ impl<'a> Parser<'a> {
     /// Returns NonExpectedToken error when TokenKinds differ
     /// Used for parsing the next expected token
     pub fn expect(&mut self, kind: TokenKind) -> Result<Token, GlobalError> {
+        const EXPECT_IDENT: &[TokenKind] = &[TokenKind::Ident];
+
         let token = self.current().clone();
         if token.kind == kind {
             self.advance_position();
@@ -81,7 +83,7 @@ impl<'a> Parser<'a> {
             Ok(token)
         } else {
             Err(GlobalError {
-                kind: ErrorKind::Parse(ParseErrorKind::NonExpectedToken(vec![kind], token.kind)),
+                kind: ErrorKind::Parse(ParseErrorKind::NonExpectedToken(EXPECT_IDENT, token.kind)),
                 span: token.span,
             })
         }
@@ -111,7 +113,7 @@ impl<'a> Parser<'a> {
             _ => {
                 return Err(give_non_expected_token_error(
                     &token.kind,
-                    vec![TokenKind::Ident, TokenKind::Number(0)],
+                    &[TokenKind::Ident, TokenKind::Number(0)],
                     token.span,
                 ));
             }
@@ -169,7 +171,7 @@ impl<'a> Parser<'a> {
 
             token => Err(give_non_expected_token_error(
                 &token.kind,
-                vec![TokenKind::Semicolon, TokenKind::Newline],
+                &[TokenKind::Semicolon, TokenKind::Newline],
                 token.span,
             )),
         }
@@ -190,7 +192,7 @@ impl<'a> Parser<'a> {
             _ => {
                 return Err(give_non_expected_token_error(
                     &token.kind,
-                    vec![TokenKind::Ident],
+                    &[TokenKind::Ident],
                     token.span,
                 ));
             }
@@ -218,7 +220,7 @@ impl<'a> Parser<'a> {
                 | TokenKind::Number(_)) => {
                     return Err(give_non_expected_token_error(
                         &kind,
-                        vec![
+                        &[
                             TokenKind::Let,
                             TokenKind::Loop,
                             TokenKind::Print,
@@ -337,7 +339,7 @@ impl<'a> Parser<'a> {
             token => {
                 return Err(give_non_expected_token_error(
                     &token.kind,
-                    vec![TokenKind::Semicolon, TokenKind::Newline, TokenKind::Equal],
+                    &[TokenKind::Semicolon, TokenKind::Newline, TokenKind::Equal],
                     token.span,
                 ));
             }
@@ -378,7 +380,7 @@ impl<'a> Parser<'a> {
             Token { kind: _, span } => {
                 return Err(give_non_expected_token_error(
                     &token.kind,
-                    vec![TokenKind::Do],
+                    &[TokenKind::Do],
                     *span,
                 ));
             }
@@ -398,7 +400,7 @@ impl<'a> Parser<'a> {
                 Some(_) => loop_statements.push(self.parse_statement()?),
                 None => {
                     return Err(GlobalError::parse(
-                        ParseErrorKind::UnexpectedEOF(vec![
+                        ParseErrorKind::UnexpectedEOF(&[
                             TokenKind::Let,
                             TokenKind::Loop,
                             TokenKind::End,

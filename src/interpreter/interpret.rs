@@ -39,9 +39,11 @@ impl RuntimeContext {
     }
 
     // getting the current context of
-    pub fn get_variable(&self, ident_id: &IdentId) -> usize {
-        debug_assert!(self.contains_variable(ident_id), "variable not found");
-        self.variables[ident_id]
+    pub fn get_variable(&self, ident_id: &IdentId) -> Result<usize, RuntimeErrorKind> {
+        self.variables
+            .get(ident_id)
+            .copied()
+            .ok_or(RuntimeErrorKind::VariableNotFound)
     }
 }
 
@@ -90,22 +92,25 @@ impl<'a> Interpreter<'a> {
     }
 
     /// interpret expression in the current context
-    pub fn interpret_expr(&mut self, expr: &Expr) -> usize {
+    pub fn interpret_expr(&mut self, expr: &Expr) -> Result<usize, GlobalError> {
         match &expr.node {
-            crate::sem_parser::ExprKind::Number(num) => *num,
+            crate::sem_parser::ExprKind::Number(num) => Ok(*num),
             crate::sem_parser::ExprKind::Ident(ident) => {
-                self.context.get_variable(&ident.ident_number)
+                match self.context.get_variable(&ident.ident_number) {
+                    Ok(variable) => Ok(variable),
+                    Err(kind) => Err(GlobalError::runtime(kind, ident.span)),
+                }
             }
             crate::sem_parser::ExprKind::Binary { left, op, right } => {
-                let left_expr_eval = self.interpret_expr(left);
-                let right_expr_eval = self.interpret_expr(right);
+                let left_expr_eval = self.interpret_expr(left)?;
+                let right_expr_eval = self.interpret_expr(right)?;
 
-                match op.node {
+                Ok(match op.node {
                     crate::sem_parser::BinOpKind::Add => left_expr_eval + right_expr_eval,
                     crate::sem_parser::BinOpKind::Sub => {
                         left_expr_eval.saturating_sub(right_expr_eval)
                     }
-                }
+                })
             }
         }
     }
@@ -150,23 +155,30 @@ impl<'a> Interpreter<'a> {
                 self.context.add_variable(&name.ident_number);
 
                 if let Some(expr) = value {
-                    let eval_expr = self.interpret_expr(expr);
+                    let eval_expr = self.interpret_expr(expr)?;
                     self.context.set_variable(&name.ident_number, eval_expr);
                 }
             }
             crate::sem_parser::StatementKind::Assign { name, value } => {
-                let eval_expr = self.interpret_expr(value);
+                let eval_expr = self.interpret_expr(value)?;
                 self.context.set_variable(&name.ident_number, eval_expr);
             }
             crate::sem_parser::StatementKind::Loop { var, body } => {
-                let num = self.context.get_variable(&var.ident_number);
+                let num = match self.context.get_variable(&var.ident_number) {
+                    Ok(num) => num,
+                    Err(kind) => return Err(GlobalError::runtime(kind, var.span)),
+                };
                 if num != 0 {
                     let loop_frame = Frame::new(FrameKind::Loop { remaining: num - 1 }, body);
                     self.stack.push(loop_frame);
                 }
             }
             crate::sem_parser::StatementKind::Print { name: ident } => {
-                println!("{}", self.context.get_variable(&ident.ident_number));
+                let variable = match self.context.get_variable(&ident.ident_number) {
+                    Ok(var) => var,
+                    Err(kind) => return Err(GlobalError::runtime(kind, ident.span)),
+                };
+                println!("{}", variable);
             }
             crate::sem_parser::StatementKind::Empty => (),
         }

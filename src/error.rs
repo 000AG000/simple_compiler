@@ -1,6 +1,10 @@
 pub use crate::lexer::Span;
 use crate::lexer::TokenKind;
-use std::{error::Error, fmt, fmt::Display};
+use std::{
+    char,
+    error::Error,
+    fmt::{self, Display},
+};
 
 /// number of characters to visualize ahead when showing an error
 pub const LOOK_AHEAD: usize = 20;
@@ -76,7 +80,7 @@ impl Display for GlobalError {
         match &self.kind {
             ErrorKind::Lex(lex_error_kind) => write!(
                 f,
-                "Lexical Analysis error on position {} to {}: {:?}",
+                "Lex error [{}..{}]: {}",
                 self.span.start, self.span.end, lex_error_kind
             ),
             ErrorKind::Parse(parse_error) => match &parse_error {
@@ -95,9 +99,7 @@ impl Display for GlobalError {
                     "Parsing error: Got non unexpected end of file, expected one of these tokens: {:?}",
                     token_expect
                 ),
-                ParseErrorKind::InternalError(error_string) => {
-                    write!(f, "Internal Parser Error: {}", error_string)
-                }
+
                 ParseErrorKind::IdentifierNotKnown(ident_str) => {
                     write!(f, "Parsing error: Identifier not defined: {}", ident_str,)
                 }
@@ -105,11 +107,11 @@ impl Display for GlobalError {
                 ParseErrorKind::UnexpectedEnd => write!(f, "Parsing error: Unexpected loop end",),
             },
             ErrorKind::Runtime(runtime_error_kind) => match &runtime_error_kind {
-                RuntimeErrorKind::InternalError(error_str) => {
-                    write!(f, "Runtime error: {}", error_str)
-                }
                 RuntimeErrorKind::VariableAlreadyDefined => {
                     write!(f, "Runtime error: Variable already defined")
+                }
+                RuntimeErrorKind::VariableNotFound => {
+                    write!(f, "Runtime error: Variable not found")
                 }
             },
         }
@@ -127,16 +129,28 @@ impl Error for GlobalError {}
 pub enum LexErrorKind {
     UnknownCharacter(char),
     UnexpectedCharacter(char),
-    /// Conversion error expected first type (first string) and god last string
+    /// Conversion error expected first type (first string) and got last string
     ConversionError(String, String),
+}
+
+impl Display for LexErrorKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            LexErrorKind::UnknownCharacter(char) => write!(f, "Unknown Character ({})", char),
+            LexErrorKind::UnexpectedCharacter(char) => write!(f, "Unexpected Character ({})", char),
+            LexErrorKind::ConversionError(to_string, got_str) => {
+                write!(f, "Conversion Error to {} got: {}", to_string, got_str)
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
 pub enum ParseErrorKind {
     /// NonExpectedToken(expected TokenKinds, gotten TokenKind)
-    NonExpectedToken(Vec<TokenKind>, TokenKind),
+    NonExpectedToken(&'static [TokenKind], TokenKind),
     /// UnexpectedEOF(expected TokenKinds)
-    UnexpectedEOF(Vec<TokenKind>),
+    UnexpectedEOF(&'static [TokenKind]),
     /// Identifier is already used
     /// - String for Identification
     /// - Span: where Identifier was already defined
@@ -148,12 +162,11 @@ pub enum ParseErrorKind {
     UnclosedLoop,
     /// Unexpected End of loop
     UnexpectedEnd,
-    InternalError(String),
 }
 
 #[derive(Debug, Clone)]
 /// Errors that can occur during the interpreting process
 pub enum RuntimeErrorKind {
-    InternalError(String),
     VariableAlreadyDefined,
+    VariableNotFound,
 }

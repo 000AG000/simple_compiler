@@ -6,7 +6,7 @@ use crate::{
 /// Small helper function for creating NonExpectedToken Errors
 pub fn give_non_expected_token_error(
     got_token_kind: &TokenKind,
-    expected_token_kinds: Vec<TokenKind>,
+    expected_token_kinds: &'static [TokenKind],
     associated_span: Span,
 ) -> GlobalError {
     GlobalError::parse(
