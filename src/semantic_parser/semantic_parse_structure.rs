@@ -2,7 +2,7 @@
 
 use crate::lexer::Span;
 
-use super::sem_parse_context::Ident;
+use super::semantic_parse_context::Ident;
 
 #[derive(Debug, Clone, PartialEq, Default)]
 /// struct for a whole program

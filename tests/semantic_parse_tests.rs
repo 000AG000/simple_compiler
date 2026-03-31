@@ -6,7 +6,7 @@ mod tests {
     use simple_interpreter::{
         error::ParseErrorKind,
         lexer::{ErrorKind, Span, lex_ascii},
-        sem_parser::{
+        semantic_parser::{
             BinOp, BinOpKind, Expr, ExprKind, Ident, IdentKind, Program, Statement, StatementKind,
             parse,
         },

@@ -1,4 +1,4 @@
-use crate::sem_parser::Statement;
+use crate::semantic_parser::Statement;
 
 #[derive(Debug, Clone, PartialEq)]
 /// All Types of Execution Frames that can occur in the program

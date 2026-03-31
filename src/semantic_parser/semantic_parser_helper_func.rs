@@ -1,6 +1,6 @@
 use crate::{
     lexer::{Span, TokenKind},
-    sem_parser::{GlobalError, ParseErrorKind},
+    semantic_parser::{GlobalError, ParseErrorKind},
 };
 
 /// Small helper function for creating NonExpectedToken Errors

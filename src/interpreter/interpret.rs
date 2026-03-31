@@ -3,7 +3,7 @@ use crate::{
         GlobalError, RuntimeErrorKind,
         frame::{Frame, FrameKind},
     },
-    sem_parser::{Expr, IdentId, Program, Statement},
+    semantic_parser::{Expr, IdentId, Program, Statement},
 };
 use log::debug;
 use std::collections::HashMap;
@@ -94,20 +94,20 @@ impl<'a> Interpreter<'a> {
     /// interpret expression in the current context
     pub fn interpret_expr(&mut self, expr: &Expr) -> Result<usize, GlobalError> {
         match &expr.node {
-            crate::sem_parser::ExprKind::Number(num) => Ok(*num),
-            crate::sem_parser::ExprKind::Ident(ident) => {
+            crate::semantic_parser::ExprKind::Number(num) => Ok(*num),
+            crate::semantic_parser::ExprKind::Ident(ident) => {
                 match self.context.get_variable(&ident.ident_number) {
                     Ok(variable) => Ok(variable),
                     Err(kind) => Err(GlobalError::runtime(kind, ident.span)),
                 }
             }
-            crate::sem_parser::ExprKind::Binary { left, op, right } => {
+            crate::semantic_parser::ExprKind::Binary { left, op, right } => {
                 let left_expr_eval = self.interpret_expr(left)?;
                 let right_expr_eval = self.interpret_expr(right)?;
 
                 Ok(match op.node {
-                    crate::sem_parser::BinOpKind::Add => left_expr_eval + right_expr_eval,
-                    crate::sem_parser::BinOpKind::Sub => {
+                    crate::semantic_parser::BinOpKind::Add => left_expr_eval + right_expr_eval,
+                    crate::semantic_parser::BinOpKind::Sub => {
                         left_expr_eval.saturating_sub(right_expr_eval)
                     }
                 })
@@ -144,7 +144,7 @@ impl<'a> Interpreter<'a> {
             statement.pretty_print(self.input_str)
         );
         match &statement.node {
-            crate::sem_parser::StatementKind::Let { name, value } => {
+            crate::semantic_parser::StatementKind::Let { name, value } => {
                 if self.context.contains_variable(&name.ident_number) {
                     return Err(GlobalError::runtime(
                         RuntimeErrorKind::VariableAlreadyDefined,
@@ -159,11 +159,11 @@ impl<'a> Interpreter<'a> {
                     self.context.set_variable(&name.ident_number, eval_expr);
                 }
             }
-            crate::sem_parser::StatementKind::Assign { name, value } => {
+            crate::semantic_parser::StatementKind::Assign { name, value } => {
                 let eval_expr = self.interpret_expr(value)?;
                 self.context.set_variable(&name.ident_number, eval_expr);
             }
-            crate::sem_parser::StatementKind::Loop { var, body } => {
+            crate::semantic_parser::StatementKind::Loop { var, body } => {
                 let num = match self.context.get_variable(&var.ident_number) {
                     Ok(num) => num,
                     Err(kind) => return Err(GlobalError::runtime(kind, var.span)),
@@ -173,14 +173,14 @@ impl<'a> Interpreter<'a> {
                     self.stack.push(loop_frame);
                 }
             }
-            crate::sem_parser::StatementKind::Print { name: ident } => {
+            crate::semantic_parser::StatementKind::Print { name: ident } => {
                 let variable = match self.context.get_variable(&ident.ident_number) {
                     Ok(var) => var,
                     Err(kind) => return Err(GlobalError::runtime(kind, ident.span)),
                 };
                 println!("{}", variable);
             }
-            crate::sem_parser::StatementKind::Empty => (),
+            crate::semantic_parser::StatementKind::Empty => (),
         }
         Ok(())
     }
@@ -195,7 +195,7 @@ impl<'a> Interpreter<'a> {
 /// example usage:
 /// ```
 /// use simple_interpreter::lexer::lex_ascii;
-/// use simple_interpreter::sem_parser::parse;
+/// use simple_interpreter::semantic_parser::parse;
 /// use simple_interpreter::interpreter::exec;
 /// let input_str = "let x = 0;print x;";
 /// let input_tokens = lex_ascii(input_str).unwrap();

@@ -1,13 +1,13 @@
 use log::trace;
 
-use super::sem_parser_helper_func::*;
+use super::semantic_parser_helper_func::*;
 
 use crate::{
     lexer::{GlobalError, Span, Token, TokenKind},
-    sem_parser::{
+    semantic_parser::{
         BinOp, BinOpKind, ErrorKind, Expr, ExprKind, Ident, ParseErrorKind, Statement,
         StatementKind,
-        sem_parse_context::{IdentKind, ParseContext},
+        semantic_parse_context::{IdentKind, ParseContext},
     },
 };
 
@@ -436,7 +436,7 @@ impl<'a> Parser<'a> {
 /// example usage:
 /// ```
 /// use simple_interpreter::lexer::lex_ascii;
-/// use simple_interpreter::sem_parser::parse;
+/// use simple_interpreter::semantic_parser::parse;
 /// let input_str = "let x = 0;";
 /// let input_tokens = lex_ascii(input_str).unwrap();
 /// parse(&input_tokens,input_str).unwrap();

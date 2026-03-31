@@ -43,6 +43,12 @@ cargo build --release
 simple_interpreter -p path_to_file
 ```
 
+with logging:
+```bash
+RUST_LOG=debug simple_interpreter -p path_to_file 
+```
+
+
 ## Example file
 
 A file cloud look like this:
