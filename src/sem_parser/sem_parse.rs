@@ -228,13 +228,13 @@ impl<'a> Parser<'a> {
                     ));
                 }
                 TokenKind::EOF => {
-                    return Err(GlobalError {
-                        kind: ErrorKind::Parse(ParseErrorKind::UnexpectedEnd),
-                        span: Span {
+                    return Err(GlobalError::parse(
+                        ParseErrorKind::UnexpectedEnd,
+                        Span {
                             start: self.input_str.len(),
                             end: self.input_str.len(),
                         },
-                    });
+                    ));
                 }
                 TokenKind::Newline | TokenKind::Semicolon => {
                     self.advance_position();
@@ -397,19 +397,19 @@ impl<'a> Parser<'a> {
                 }
                 Some(_) => loop_statements.push(self.parse_statement()?),
                 None => {
-                    return Err(GlobalError {
-                        kind: ErrorKind::Parse(ParseErrorKind::UnexpectedEOF(vec![
+                    return Err(GlobalError::parse(
+                        ParseErrorKind::UnexpectedEOF(vec![
                             TokenKind::Let,
                             TokenKind::Loop,
                             TokenKind::End,
                             TokenKind::Ident,
                             TokenKind::Print,
-                        ])),
-                        span: Span {
+                        ]),
+                        Span {
                             start: self.input_str.len(),
                             end: self.input_str.len(),
                         },
-                    });
+                    ));
                 }
             }
         }

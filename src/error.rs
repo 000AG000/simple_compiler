@@ -49,8 +49,28 @@ impl GlobalError {
 
         error_string
     }
-}
 
+    pub fn lex(kind: LexErrorKind, span: Span) -> Self {
+        Self {
+            kind: ErrorKind::Lex(kind),
+            span,
+        }
+    }
+
+    pub fn parse(kind: ParseErrorKind, span: Span) -> Self {
+        Self {
+            kind: ErrorKind::Parse(kind),
+            span,
+        }
+    }
+
+    pub fn runtime(kind: RuntimeErrorKind, span: Span) -> Self {
+        Self {
+            kind: ErrorKind::Runtime(kind),
+            span,
+        }
+    }
+}
 impl Display for GlobalError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self.kind {

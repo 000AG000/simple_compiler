@@ -1,6 +1,6 @@
 use crate::{
     interpreter::{
-        ErrorKind, GlobalError, RuntimeErrorKind,
+        GlobalError, RuntimeErrorKind,
         frame::{Frame, FrameKind},
     },
     sem_parser::{Expr, IdentId, Program, Statement},
@@ -141,10 +141,10 @@ impl<'a> Interpreter<'a> {
         match &statement.node {
             crate::sem_parser::StatementKind::Let { name, value } => {
                 if self.context.contains_variable(&name.ident_number) {
-                    return Err(GlobalError {
-                        kind: ErrorKind::Runtime(RuntimeErrorKind::VariableAlreadyDefined),
-                        span: statement.span,
-                    });
+                    return Err(GlobalError::runtime(
+                        RuntimeErrorKind::VariableAlreadyDefined,
+                        statement.span,
+                    ));
                 }
 
                 self.context.add_variable(&name.ident_number);

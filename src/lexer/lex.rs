@@ -4,7 +4,7 @@ use log::trace;
 
 use super::lex_table::{LexTable, LexTableEntry};
 use super::token::{Span, Token, TokenKind, get_keyword_map};
-use super::{ErrorKind, GlobalError, LexErrorKind};
+use super::{GlobalError, LexErrorKind};
 
 /// tokenization function for transforming string into token vector
 /// Assumes ASCII input only.
@@ -47,13 +47,13 @@ pub fn lex_ascii(input_str: &str) -> Result<Vec<Token>, GlobalError> {
                     kind: TokenKind::Number(match number_str.parse::<usize>() {
                         Ok(number) => number,
                         Err(_) => {
-                            return Err(GlobalError {
-                                kind: ErrorKind::Lex(LexErrorKind::ConversionError(
+                            return Err(GlobalError::lex(
+                                LexErrorKind::ConversionError(
                                     "number".to_string(),
                                     number_str.to_string(),
-                                )),
+                                ),
                                 span,
-                            });
+                            ));
                         }
                     }),
                     span,
@@ -82,13 +82,13 @@ pub fn lex_ascii(input_str: &str) -> Result<Vec<Token>, GlobalError> {
     for (position, next_elem) in input_str.bytes().enumerate() {
         // return non ASCII characters
         if !next_elem.is_ascii() {
-            return Err(GlobalError {
-                kind: ErrorKind::Lex(LexErrorKind::UnknownCharacter(next_elem as char)),
-                span: Span {
+            return Err(GlobalError::lex(
+                LexErrorKind::UnknownCharacter(next_elem as char),
+                Span {
                     start: position,
                     end: position + 1,
                 },
-            });
+            ));
         }
 
         let lex_entry = lex_table.classify(next_elem);
@@ -128,13 +128,13 @@ pub fn lex_ascii(input_str: &str) -> Result<Vec<Token>, GlobalError> {
                 })
             }
             (_, LexTableEntry::Alphabetic) => {
-                return Err(GlobalError {
-                    kind: ErrorKind::Lex(LexErrorKind::UnexpectedCharacter(next_elem as char)),
-                    span: Span {
+                return Err(GlobalError::lex(
+                    LexErrorKind::UnexpectedCharacter(next_elem as char),
+                    Span {
                         start: position,
                         end: position + 1,
                     },
-                });
+                ));
             }
             (LexState::Normal, LexTableEntry::Numeric) => LexState::Number(Span {
                 start: position,
@@ -159,32 +159,32 @@ pub fn lex_ascii(input_str: &str) -> Result<Vec<Token>, GlobalError> {
                 LexState::Normal
             }
             (_, LexTableEntry::Numeric) => {
-                return Err(GlobalError {
-                    kind: ErrorKind::Lex(LexErrorKind::UnexpectedCharacter(next_elem as char)),
-                    span: Span {
+                return Err(GlobalError::lex(
+                    LexErrorKind::UnexpectedCharacter(next_elem as char),
+                    Span {
                         start: position,
                         end: position + 1,
                     },
-                });
+                ));
             }
             (_, LexTableEntry::Undefined) => {
-                return Err(GlobalError {
-                    kind: ErrorKind::Lex(LexErrorKind::UnknownCharacter(next_elem as char)),
-                    span: Span {
+                return Err(GlobalError::lex(
+                    LexErrorKind::UnknownCharacter(next_elem as char),
+                    Span {
                         start: position,
                         end: position + 1,
                     },
-                });
+                ));
             }
             (LexState::SpaceNeeding, LexTableEntry::Split) => LexState::Normal,
             (LexState::SpaceNeeding, _) => {
-                return Err(GlobalError {
-                    kind: ErrorKind::Lex(LexErrorKind::UnexpectedCharacter(next_elem as char)),
-                    span: Span {
+                return Err(GlobalError::lex(
+                    LexErrorKind::UnexpectedCharacter(next_elem as char),
+                    Span {
                         start: position,
                         end: position + 1,
                     },
-                });
+                ));
             }
             (LexState::Number(span), LexTableEntry::Split) => {
                 handle_string_end(
