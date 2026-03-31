@@ -13,7 +13,7 @@ STATEMENT_LIST -> STATEMENT (SEPARATOR STATEMENT)*
 STATEMENT ->
     LET IDENT ("=" EXPRESSION)?
   | IDENT "=" EXPRESSION
-  | LOOP IDENT DO STATEMENT_LIST END
+  | LOOP IDENT DO STATEMENT_LIST END // Loop does the STATEMENT_LIST the number of times the identifier evaluates to
   | PRINT IDENT
   | EMPTY
 
@@ -25,10 +25,39 @@ TERM ->
 
 SEPARATOR -> ("\n" | ";")
 
+
+Nodes:
+Variables are only unsized integers
+Variables have to be declared with let before using them
+This is ASCII only
+
+
+## Build
+
+```bash
+cargo build --release
+```
+
 ## How to use
 ```bash
 simple_interpreter -p path_to_file
 ```
+
+## Example file
+
+A file cloud look like this:
+```
+let x = 3;
+LOOP x DO
+    print x;
+END
+```
+
+The output is the following
+
+3
+3
+3
 
 ## Project structure
 

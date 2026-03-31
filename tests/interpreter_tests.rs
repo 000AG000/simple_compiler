@@ -38,7 +38,7 @@ mod tests {
         let program = match parse(&lex_vec, &input_str) {
             Ok(program) => program,
             Err(error) => {
-                println!("{}", error.generate_error_msg(&input_str));
+                eprintln!("{}", error.generate_error_msg(&input_str));
                 panic!("program not read in correctly");
             }
         };

@@ -4,7 +4,8 @@
 mod tests {
 
     use simple_interpreter::{
-        lexer::{Span, lex_ascii},
+        error::ParseErrorKind,
+        lexer::{ErrorKind, Span, lex_ascii},
         sem_parser::{
             BinOp, BinOpKind, Expr, ExprKind, Ident, IdentKind, Program, Statement, StatementKind,
             parse,
@@ -26,7 +27,7 @@ mod tests {
         let program = match parse(&lex_vec, &input_str) {
             Ok(program) => program,
             Err(error) => {
-                println!("{}", error.generate_error_msg(&input_str));
+                eprintln!("{}", error.generate_error_msg(&input_str));
                 panic!("program not read in correctly");
             }
         };
@@ -93,5 +94,22 @@ mod tests {
         };
 
         println!("{:#?}", program);
+    }
+
+    #[test]
+    fn test_parsing_only_assign() {
+        init();
+        let input_str = "x = 1;print x;";
+        let lex_vec = lex_ascii(input_str).unwrap();
+
+        match parse(&lex_vec, input_str) {
+            Ok(_) => panic!(),
+            Err(error) => {
+                assert_eq!(
+                    error.kind,
+                    ErrorKind::Parse(ParseErrorKind::IdentifierNotKnown("x".to_string()))
+                );
+            }
+        };
     }
 }

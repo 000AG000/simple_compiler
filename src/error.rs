@@ -20,7 +20,7 @@ pub struct GlobalError {
     pub span: Span,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ErrorKind {
     Lex(LexErrorKind),
     Parse(ParseErrorKind),
@@ -124,7 +124,7 @@ impl Error for GlobalError {}
 // Specific error kinds
 // ----------------------------------------------
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 /// Errors that can occur during the tokenization process
 pub enum LexErrorKind {
     UnknownCharacter(char),
@@ -145,7 +145,7 @@ impl Display for LexErrorKind {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ParseErrorKind {
     /// NonExpectedToken(expected TokenKinds, gotten TokenKind)
     NonExpectedToken(&'static [TokenKind], TokenKind),
@@ -164,7 +164,7 @@ pub enum ParseErrorKind {
     UnexpectedEnd,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 /// Errors that can occur during the interpreting process
 pub enum RuntimeErrorKind {
     VariableAlreadyDefined,

@@ -37,12 +37,12 @@ fn main() {
     let input_str = match std::fs::read_to_string(&args.path) {
         Ok(path) => path,
         Err(err) => {
-            println!("Could not read file: {}\nError:{}", &args.path, err);
+            eprintln!("Could not read file: {}\nError:{}", &args.path, err);
             return;
         }
     };
 
     if let Err(e) = interpret_input_str(&input_str) {
-        println!("{}", e.generate_error_msg(&input_str));
+        eprintln!("{}", e.generate_error_msg(&input_str));
     }
 }
